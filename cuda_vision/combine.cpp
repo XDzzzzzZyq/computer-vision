@@ -1,5 +1,4 @@
 #include <torch/extension.h>
-#include <vector>
 
 void watermark_op(
     torch::Tensor& result,

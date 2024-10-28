@@ -1,5 +1,4 @@
 #include <torch/extension.h>
-#include <vector>
 
 void to_grayscale_op(
     torch::Tensor& gray,

@@ -8,23 +8,18 @@ from torch.utils.cpp_extension import load
 
 module_path = os.path.dirname(__file__)
 
+def load_src(name):
+    return  load(name,
+                 sources=[
+                     os.path.join(module_path, f"{name}.cpp"),
+                     os.path.join(module_path, f"{name}_kernel.cu")
+                 ],
+                 extra_include_paths=[os.path.join(module_path, "include")])
+
 print(">>> Compiling CUDA Operators")
 
-convert = load(
-    "convert",
-    sources=[
-        os.path.join(module_path, "convert.cpp"),
-        os.path.join(module_path, "convert_kernel.cu"),
-    ],
-)
-
-combine = load(
-    "combine",
-    sources=[
-        os.path.join(module_path, "combine.cpp"),
-        os.path.join(module_path, "combine_kernel.cu"),
-    ],
-)
+convert = load_src("convert")
+combine = load_src("combine")
 
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
     return convert.to_grayscale(img)
