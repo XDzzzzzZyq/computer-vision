@@ -11,7 +11,7 @@ void to_grayscale_op(
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
 torch::Tensor to_grayscale(const torch::Tensor& image) {
-    CHECK_CONTIGUOUS(image);
+    CHECK_INPUT(image);
 
     int b = image.size(0);
     int h = image.size(2);
