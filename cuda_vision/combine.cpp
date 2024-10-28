@@ -22,5 +22,5 @@ torch::Tensor watermark(const torch::Tensor& image, const torch::Tensor& mark, i
 }
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
-    m.def("watermark", &watermark, "Overlay the Watermark to Target Image");
+    m.def("watermark", &watermark, "Overlay the Watermark to Target Images");
 }

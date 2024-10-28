@@ -21,7 +21,13 @@ struct pixel{
         return pixel<scalar_t>{r+tar.r, g+tar.g, b+tar.b};
     }
     __device__ pixel<scalar_t> operator-(const pixel<scalar_t>& tar){
-        return *self + tar * -1.0;
+        return *this + tar * -1.0;
+    }
+    __device__ pixel<scalar_t> operator+(scalar_t tar){
+        return pixel<scalar_t>{r+tar, g+tar, b+tar};
+    }
+    __device__ pixel<scalar_t> operator-(scalar_t tar){
+        return *this + tar * -1.0;
     }
     __device__ __host__ scalar_t grayscale(){
         return 0.299*r + 0.587*g + 0.114*b;

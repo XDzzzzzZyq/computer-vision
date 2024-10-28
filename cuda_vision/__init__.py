@@ -8,6 +8,7 @@ from torch.utils.cpp_extension import load
 
 module_path = os.path.dirname(__file__)
 
+
 def load_src(name):
     return  load(name,
                  sources=[
@@ -16,16 +17,24 @@ def load_src(name):
                  ],
                  extra_include_paths=[os.path.join(module_path, "include")])
 
+
 print(">>> Compiling CUDA Operators")
 
 convert = load_src("convert")
 combine = load_src("combine")
 
+
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
     return convert.to_grayscale(img)
 
+
 def make_watermark(img: torch.Tensor, mark: torch.Tensor, offset=(0, 0)) -> torch.Tensor:
     return combine.watermark(img, mark, offset[0], offset[1])
+
+
+def invert(img: torch.Tensor) -> torch.Tensor:
+    return convert.invert(img)
+
 
 if __name__ == "__main__":
     from utils.imgeIO import compare_imgs, show_img, load_raw
@@ -39,5 +48,9 @@ if __name__ == "__main__":
 
     mark = load_raw('../imgs/dku_logo_color.raw', 128, 128, 3)
     marked_img = make_watermark(img, mark)
-    show_img(marked_img)
+    compare_imgs([img, marked_img])
+    plt.show()
+
+    inverted_img = invert(img)
+    compare_imgs([img, inverted_img])
     plt.show()

@@ -8,7 +8,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "utils.cuh"
+#include "pixel.cuh"
 
 template <typename scalar_t>
 static __global__ void watermark_kernel(
