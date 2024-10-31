@@ -9,11 +9,7 @@
 #include <cuda_runtime.h>
 
 #include "pixelUtils.cuh"
-
-template <typename scalar_t>
-__global__ void init_array(scalar_t* array, scalar_t value) {
-    array[threadIdx.x] = value;
-}
+#include "arrayUtils.cuh"
 
 template <typename scalar_t>
 static __global__ void minmax_kernel(
@@ -59,17 +55,8 @@ void minmax_scale_op(
     int w = image.size(3);
     dim3 grid_size(h, w, 1);
 
-    int* batched_min;
-    int* batched_max;
-    int size = b * sizeof(int);
-    cudaMalloc(&batched_min, size);
-    cudaMalloc(&batched_max, size);
-    init_array<int><<<1, b, 0, stream>>>(
-        batched_min, INT_MAX
-    );
-    init_array<int><<<1, b, 0, stream>>>(
-        batched_max, INT_MIN
-    );
+    int* batched_min = make_array(b, INT_MAX);
+    int* batched_max = make_array(b, INT_MIN);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "minmax_kernel", [&] {
         minmax_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
