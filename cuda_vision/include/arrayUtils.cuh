@@ -9,8 +9,10 @@
 #include <cuda_runtime.h>
 
 template <typename scalar_t>
-__global__ void init_array(scalar_t* array, scalar_t value) {
-    array[threadIdx.x] = value;
+__global__ void init_array(scalar_t* array, int num, scalar_t value) {
+    int loc = blockIdx.x * blockDim.x + threadIdx.x;
+    if (loc <= num)
+        array[loc] = value;
 }
 
 template <typename scalar_t>
@@ -22,8 +24,10 @@ scalar_t* make_array(int num, scalar_t def=0){
 
     int* ptr;
     cudaMalloc(&ptr, size);
-    init_array<int><<<1, num, 0, stream>>>(
-        ptr, def
+    int block_size = 256;
+    int grid_size = num / block_size;
+    init_array<int><<<grid_size, block_size, 0, stream>>>(
+        ptr, num, def
     );
 
     return ptr;
