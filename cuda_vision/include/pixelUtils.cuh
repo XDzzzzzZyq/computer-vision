@@ -67,10 +67,24 @@ static __device__ void set_pixel(
 }
 
 template <typename scalar_t>
-static __device__ pixel<scalar_t> get_value(
+static __device__ scalar_t get_value(
     const scalar_t* gray,
-    int x, int y
+    int x, int y, int h=0, int w=0
 ){
-    int batch = threadIdx.x * gridDim.x * gridDim.y;
-    return gray[batch + y * gridDim.x + x];
+    h = h == 0 ? gridDim.x : h;
+    w = w == 0 ? gridDim.y : w;
+    int batch_off = threadIdx.x * h * w;
+    return gray[batch_off + y * h + x];
+}
+
+template <typename scalar_t>
+static __device__ void set_value(
+    scalar_t* gray,
+    scalar_t value,
+    int x, int y, int h=0, int w=0
+){
+    h = h == 0 ? gridDim.x : h;
+    w = w == 0 ? gridDim.y : w;
+    int batch_off = threadIdx.x * h * w;
+    gray[batch_off + y * h + x] = value;
 }

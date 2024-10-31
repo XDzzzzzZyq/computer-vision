@@ -22,6 +22,7 @@ print(">>> Compiling CUDA Operators")
 
 convert = load_src("convert")
 combine = load_src("combine")
+enhance = load_src("enhance")
 
 
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
@@ -34,6 +35,10 @@ def make_watermark(img: torch.Tensor, mark: torch.Tensor, offset=(0, 0)) -> torc
 
 def invert(img: torch.Tensor) -> torch.Tensor:
     return convert.invert(img)
+
+
+def minmax_scale(img: torch.Tensor) -> torch.Tensor:
+    return enhance.minmax_scale(img)
 
 
 if __name__ == "__main__":
@@ -53,4 +58,8 @@ if __name__ == "__main__":
 
     inverted_img = invert(img)
     compare_imgs([img, inverted_img])
+
+    img = load_raw('../imgs/rose_dark.raw', 256, 256, 1)
+    scaled_img = minmax_scale(img)
+    compare_imgs([img, scaled_img])
     plt.show()

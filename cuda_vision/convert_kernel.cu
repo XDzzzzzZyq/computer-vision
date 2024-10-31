@@ -8,7 +8,7 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
-#include "pixel.cuh"
+#include "pixelUtils.cuh"
 
 template <typename scalar_t>
 static __global__ void to_grayscale_kernel(

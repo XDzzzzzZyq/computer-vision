@@ -26,7 +26,7 @@ def show_img(image, interpolation='nearest', ax=plt):
     if image.ndim == 3:
         ax.imshow(image.transpose(0, 2).detach().cpu().int(), interpolation=interpolation)
     else:
-        ax.imshow(image[0].transpose(0, 2).detach().cpu().int(), cmap='gray', interpolation=interpolation)
+        ax.imshow(image[0].transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=0.0, vmax=255.0, interpolation=interpolation)
 
 
 def compare_imgs(images:list, interpolation='nearest'):
