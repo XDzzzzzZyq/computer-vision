@@ -11,6 +11,29 @@
 #include "pixelUtils.cuh"
 
 template <typename scalar_t>
+static __global__ void overlay_kernel(
+    scalar_t* result,
+    const scalar_t* a,
+    const scalar_t* b,
+    int code
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+
+    pixel<scalar_t> pix_a = get_pixel(a, x, y);
+    pixel<scalar_t> pix_b = get_pixel(b, x, y);
+    pixel<scalar_t> pix_c;
+
+    switch(code){
+    case 0: pix_c = pix_a + pix_b; break;
+    case 1: pix_c = pix_a - pix_b; break;
+    case 2: pix_c = pix_a * pix_b; break;
+    case 3: pix_c = pix_a / pix_b; break;
+    }
+    set_pixel(result, pix_c, x, y);
+}
+
+template <typename scalar_t>
 static __global__ void watermark_kernel(
     scalar_t* result,
     const scalar_t* image,
@@ -29,6 +52,31 @@ static __global__ void watermark_kernel(
 }
 
 // C++ API
+
+void overlay_op(
+    torch::Tensor& result,
+    const torch::Tensor& im_a,
+    const torch::Tensor& im_b,
+    int code
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = im_a.size(0);
+    int h = im_a.size(2);
+    int w = im_a.size(3);
+    dim3 grid_size(h, w, 1);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(im_a.scalar_type(), "overlay_kernel", [&] {
+        overlay_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            im_a.data_ptr<scalar_t>(),
+            im_b.data_ptr<scalar_t>(),
+            code
+        );
+    });
+}
 
 void watermark_op(
     torch::Tensor& result,
