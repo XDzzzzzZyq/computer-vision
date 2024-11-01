@@ -54,7 +54,7 @@ static __global__ void minmax_scale_kernel(
 }
 
 static __global__ void mapping_kernel(
-    int* mapping, // the first element of the mapping should be always 0
+    float* mapping, // the first element of the mapping should be always 0
     const int* table,
     int w, int h, int k
 ) {
@@ -63,7 +63,7 @@ static __global__ void mapping_kernel(
 
     int count = 0;
     int stride = 0;
-    int prev = mapping[b*(k+1) + stride];
+    float prev = mapping[b*(k+1) + stride];
     for(int i = 0; i < 256; i++){
         count += table[b*256 + i];
         if (count >= num){
@@ -71,7 +71,7 @@ static __global__ void mapping_kernel(
             count -= mult*num;
             for(int j = 0; j < mult; j++){
                 stride++;
-                mapping[b*(k+1) + stride] = prev + (i - prev)*(j+1)/mult;
+                mapping[b*(k+1) + stride] = prev + (i - prev)*(j+1)/float(mult);
             }
         }
         prev = mapping[b*(k+1) + stride];
@@ -82,7 +82,7 @@ template <typename scalar_t>
 static __global__ void histo_equal_kernel(
     scalar_t* result,
     const scalar_t* image,
-    const int* mapping,
+    const float* mapping,
     int k
 ) {
     int x = blockIdx.x;
@@ -155,7 +155,7 @@ void histo_equal_op(
     dim3 grid_size(h, w, 1);
 
     int* table = make_array(b * 256, 0);
-    int* mapping = make_array(b * (k+1), 0);
+    float* mapping = make_array(b * (k+1), 0.0f);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "histo_kernel", [&] {
         histo_kernel<scalar_t><<<grid_size, b, 0, stream>>>(

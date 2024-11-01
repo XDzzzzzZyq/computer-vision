@@ -51,6 +51,8 @@ if __name__ == "__main__":
 
     img = load_raw('../imgs/rose_dark.raw', 256, 256, 1)
     scaled_img = minmax_scale(img)
-    eqlzed_img = uniform_equalize(img, 64)
-    compare_imgs([img, scaled_img, eqlzed_img])
+    eqlzed_img8  = uniform_equalize(img, 8)
+    eqlzed_img64 = uniform_equalize(img, 64)
+    eqlzed_img200= uniform_equalize(img, 200)
+    compare_imgs([img, scaled_img, eqlzed_img8, eqlzed_img64, eqlzed_img200])
     plt.show()
