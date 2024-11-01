@@ -14,20 +14,29 @@ struct pixel{
     scalar_t g;
     scalar_t b;
 
-    __device__ pixel<scalar_t> operator*(float fact){
-        return pixel<scalar_t>{scalar_t(r*fact), scalar_t(g*fact), scalar_t(b*fact)};
+    __host__ __device__ pixel<scalar_t> operator+(scalar_t tar) const {
+        return pixel<scalar_t>{r + tar, g + tar, b + tar};
     }
-    __device__ pixel<scalar_t> operator+(const pixel<scalar_t>& tar){
-        return pixel<scalar_t>{r+tar.r, g+tar.g, b+tar.b};
+    __host__ __device__ pixel<scalar_t> operator-(scalar_t tar) const {
+        return pixel<scalar_t>{r - tar, g - tar, b - tar};
     }
-    __device__ pixel<scalar_t> operator-(const pixel<scalar_t>& tar){
-        return *this + tar * -1.0;
+    __host__ __device__ pixel<scalar_t> operator*(scalar_t fact) const {
+        return pixel<scalar_t>{r * fact, g * fact, b * fact};
     }
-    __device__ pixel<scalar_t> operator+(scalar_t tar){
-        return pixel<scalar_t>{r+tar, g+tar, b+tar};
+    __host__ __device__ pixel<scalar_t> operator/(scalar_t fact) const {
+        return pixel<scalar_t>{r / fact, g / fact, b / fact};
     }
-    __device__ pixel<scalar_t> operator-(scalar_t tar){
-        return *this + tar * -1.0;
+    __host__ __device__ pixel<scalar_t> operator+(const pixel<scalar_t>& tar) const {
+        return pixel<scalar_t>{r + tar.r, g + tar.g, b + tar.b};
+    }
+    __host__ __device__ pixel<scalar_t> operator-(const pixel<scalar_t>& tar) const {
+        return pixel<scalar_t>{r - tar.r, g - tar.g, b - tar.b};
+    }
+    __host__ __device__ pixel<scalar_t> operator*(const pixel<scalar_t>& tar) const {
+        return pixel<scalar_t>{r * tar.r, g * tar.g, b * tar.b};
+    }
+    __host__ __device__ pixel<scalar_t> operator/(const pixel<scalar_t>& tar) const {
+        return pixel<scalar_t>{r / tar.r, g / tar.g, b / tar.b};
     }
     __device__ __host__ scalar_t grayscale(){
         return 0.299*r + 0.587*g + 0.114*b;
