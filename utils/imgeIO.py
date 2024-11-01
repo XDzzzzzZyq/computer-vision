@@ -23,17 +23,30 @@ def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
 
 
 def show_img(image, interpolation='nearest', ax=plt):
-    if image.ndim == 3:
-        ax.imshow(image.transpose(0, 2).detach().cpu().int(), interpolation=interpolation)
-    else:
-        ax.imshow(image[0].transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=0.0, vmax=255.0, interpolation=interpolation)
+    if image.ndim == 4:
+        image = image[0]
+    ax.imshow(image.transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=0.0, vmax=255.0,
+              interpolation=interpolation)
 
 
-def compare_imgs(images:list, interpolation='nearest'):
+def compare_imgs(images: list, interpolation='nearest'):
     n = len(images)
     fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(25 * n, 25))
     for i, ax in enumerate(axe):
-        show_img(images[i], interpolation, ax)
+        show_img(images[i], interpolation=interpolation, ax=ax)
+
+
+def show_hist(image, bins=256, ax=plt):
+    if image.ndim == 4:
+        image = image[0]
+    ax.hist(image.flatten().detach().cpu().int(), bins=bins, range=(0, 255), color='black', alpha=0.7)
+
+
+def compare_hist(images: list, bins=256):
+    n = len(images)
+    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(30 * n, 25))
+    for i, ax in enumerate(axe):
+        show_hist(images[i], bins=bins, ax=ax)
 
 
 if __name__ == '__main__':

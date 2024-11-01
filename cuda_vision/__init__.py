@@ -46,8 +46,7 @@ def uniform_equalize(img: torch.Tensor, k) -> torch.Tensor:
 
 
 if __name__ == "__main__":
-    from utils.imgeIO import compare_imgs, show_img, load_raw
-    import matplotlib.pyplot as plt
+    from utils.imgeIO import *
 
     img = load_raw('../imgs/rose_dark.raw', 256, 256, 1)
     scaled_img = minmax_scale(img)
@@ -55,4 +54,5 @@ if __name__ == "__main__":
     eqlzed_img64 = uniform_equalize(img, 64)
     eqlzed_img200= uniform_equalize(img, 200)
     compare_imgs([img, scaled_img, eqlzed_img8, eqlzed_img64, eqlzed_img200])
+    compare_hist([img, scaled_img, eqlzed_img8, eqlzed_img64, eqlzed_img200], bins=35)
     plt.show()
