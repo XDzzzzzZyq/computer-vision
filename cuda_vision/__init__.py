@@ -9,13 +9,13 @@ from torch.utils.cpp_extension import load
 module_path = os.path.dirname(__file__)
 
 
-def load_src(name):
-    return  load(name,
-                 sources=[
-                     os.path.join(module_path, f"{name}.cpp"),
-                     os.path.join(module_path, f"{name}_kernel.cu")
-                 ],
-                 extra_include_paths=[os.path.join(module_path, "include")])
+def load_src(name, verbose=False):
+    print(f"--->>> Compiling {name}")
+    return load(name,
+                sources=[os.path.join(module_path, f"{name}.cpp"),
+                         os.path.join(module_path, f"{name}_kernel.cu")],
+                extra_include_paths=[os.path.join(module_path, "include")],
+                verbose=verbose)
 
 
 print(">>> Compiling CUDA Operators")
@@ -24,6 +24,8 @@ convert = load_src("convert")
 combine = load_src("combine")
 enhance = load_src("enhance")
 filter = load_src("filter")
+
+print(">>> Finished")
 
 
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
@@ -67,20 +69,22 @@ def uniform_conv(img: torch.Tensor, size, pad) -> torch.Tensor:
 
 
 def gaussian_conv(img: torch.Tensor, std, size, pad) -> torch.Tensor:
+    assert std > 0.0, "std should be positive"
     return filter.gaussian_conv(img, std, size, pad)
+
+
+def pseudo_median(img: torch.Tensor, size, pad) -> torch.Tensor:
+    return filter.pseudo_median(img, size, pad)
 
 
 if __name__ == "__main__":
     from utils.imgeIO import *
 
-    gau = load_raw('../imgs/rose_gau.raw', 256, 256, 1)
-    uni = load_raw('../imgs/rose_uni.raw', 256, 256, 1)
-    ori = load_raw('../imgs/rose.raw', 256, 256, 1)
-
-    conv1 = uniform_conv(ori, 3, 3)
-    conv2 = gaussian_conv(ori, 3.0, 3, 3)
-    compare_imgs([ori, conv1, conv2])
+    ori = load_raw('../imgs/rose_color.raw', 256, 256, 3)
+    noi = load_raw('../imgs/rose_color_noise.raw', 256, 256, 3)
+    noi_r, noi_g, noi_b = noi[:, 0:1], noi[:, 1:2], noi[:, 2:3]
+    filtered0 = pseudo_median(noi_r, 0, 0)
+    filtered1 = pseudo_median(noi_r, 1, 1)
+    filtered2 = pseudo_median(noi_r, 2, 2)
+    compare_imgs([filtered0, filtered1, filtered2])
     plt.show()
-
-
-

@@ -35,6 +35,38 @@ scalar_t* make_array(int num, scalar_t def=0){
 }
 
 template <typename scalar_t>
+__host__ __device__ scalar_t min(scalar_t* array, int num, int begin=0) {
+    scalar_t min_v = array[0];
+    for(int i = begin; i < num; i++)
+        min_v = min(min_v, array[i]);
+    return min_v;
+}
+
+template <typename scalar_t>
+__host__ __device__ scalar_t max(scalar_t* array, int num, int begin=0) {
+    scalar_t max_v = array[0];
+    for(int i = begin; i < num; i++)
+        max_v = max(max_v, array[i]);
+    return max_v;
+}
+
+template <typename scalar_t>
+__host__ __device__ scalar_t minmax(scalar_t* array, scalar_t* temp, int num) {
+    int m = (num+1)/2;
+    for(int i = 0; i < num-m+1; i++)
+        temp[i] = max(array, m+i, i);
+    return min(temp, num-m+1);
+}
+
+template <typename scalar_t>
+__host__ __device__ scalar_t maxmin(scalar_t* array, scalar_t* temp, int num) {
+    int m = (num+1)/2;
+    for(int i = 0; i < num-m+1; i++)
+        temp[i] = min(array, m+i, i);
+    return max(temp, num-m+1);
+}
+
+template <typename scalar_t>
 void debug_array(const scalar_t* d_array, int size) {
     scalar_t* h_array = new scalar_t[size];
 

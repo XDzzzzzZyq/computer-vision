@@ -71,8 +71,43 @@ static __global__ void semi_conv_kernel(
         float w = semi_kernel[i+size];
         pixel<scalar_t> p = get_pixel(image, x, y);
     }
-
+    // TODO: to be finished.
     get_pixel(image, x, y);
+}
+
+template <typename scalar_t>
+static __global__ void pseudo_median_kernel(
+    scalar_t* result,
+    const scalar_t* gray,
+    int size, int pad
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int h = gridDim.x - 2 * (pad - size);
+    int w = gridDim.y - 2 * (pad - size);
+    int n = size*2+1;
+    int len = n*n;
+    int m = (len+1)/2;
+
+    scalar_t* array = (scalar_t*)malloc(len * sizeof(scalar_t));
+    scalar_t* temp  = (scalar_t*)malloc((len-m+1) * sizeof(scalar_t));
+    for(int i = -size; i<size+1; i++){
+        for(int j = -size; j<size+1; j++){
+            int im_x = x+size-pad+i;
+            int im_y = y+size-pad+j;
+
+            bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
+            array[(i+size)*n + j+size] = out ? 0.0 : get_value(gray, im_x, im_y, h, w);
+        }
+    }
+
+    scalar_t minmax_v = minmax(array, temp, len);
+    scalar_t maxmin_v = maxmin(array, temp, len);
+    scalar_t pseudo_m = (minmax_v + maxmin_v)/2.0;
+
+    set_value(result, pseudo_m, x, y);
+    free(array);
+    free(temp);
 }
 
 // C++ API
@@ -154,7 +189,33 @@ void gaussian_conv_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     float* kernel = make_array<float>(2*size+1, 0);
-    get_gaussian_kernel<<<1, 2*size+1, 2*size+1, stream>>>(kernel, std, size);
+    get_gaussian_kernel<<<1, 2*size+1, (2*size+1)*sizeof(float), stream>>>(kernel, std, size);
     separable_conv_op(result, image, kernel, size, pad);
     cudaFree(kernel);
+}
+
+void pseudo_median_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int size, int pad
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int h = image.size(2);
+    int w = image.size(3);
+    int e = pad - size;
+
+    //cudaDeviceSetLimit(cudaLimitMallocHeapSize, b*h*w*(2*size+1)*(2*size+1)*4);
+
+    dim3 grid_size(h+2*e, w+2*e, 1);
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "pseudo_median_kernel", [&] {
+        pseudo_median_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            size, pad
+        );
+    });
 }
