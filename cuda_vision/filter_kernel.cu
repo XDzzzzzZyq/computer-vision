@@ -7,16 +7,28 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cmath>
 
 #include "pixelUtils.cuh"
 #include "arrayUtils.cuh"
 
-template <typename scalar_t>
 static __global__ void get_gaussian_kernel(
-    scalar_t* kernel,
+    float* kernel,
     float std, int size
 ) {
     int idx = threadIdx.x;
+    int x = idx - size;
+    extern __shared__ float sharedKernel[];
+
+    float value = expf(- (x * x) / (2.0f * std * std)) / (sqrtf(2.0f * M_PI) * std);
+    sharedKernel[idx] = value;
+    __syncthreads();
+
+    float sum = 0;
+    for(int i = 0; i < blockDim.x; i++)
+        sum += sharedKernel[i];
+
+    kernel[idx] = value / sum;
 }
 
 template <typename scalar_t>
@@ -65,9 +77,10 @@ static __global__ void semi_conv_kernel(
 
 // C++ API
 
-void uniform_conv_op(
+void separable_conv_op(
     torch::Tensor& result,
     const torch::Tensor& image,
+    const float* kernel,
     int size, int pad
 ) {
     int curDevice = -1;
@@ -79,8 +92,6 @@ void uniform_conv_op(
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
-
-    float* kernel = make_array<float>(2*size+1, 1.0/(2.0*size+1.0));
 
     torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
     dim3 grid_size1(h,     w+2*e, 1);
@@ -123,6 +134,16 @@ void uniform_conv_op(
     }
 }
 
+void uniform_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int size, int pad
+) {
+    float* kernel = make_array<float>(2*size+1, 1.0/(2.0*size+1.0));
+    separable_conv_op(result, image, kernel, size, pad);
+    cudaFree(kernel);
+}
+
 void gaussian_conv_op(
     torch::Tensor& result,
     const torch::Tensor& image,
@@ -132,8 +153,8 @@ void gaussian_conv_op(
     cudaGetDevice(&curDevice);
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
-    int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, 1);
+    float* kernel = make_array<float>(2*size+1, 0);
+    get_gaussian_kernel<<<1, 2*size+1, 2*size+1, stream>>>(kernel, std, size);
+    separable_conv_op(result, image, kernel, size, pad);
+    cudaFree(kernel);
 }

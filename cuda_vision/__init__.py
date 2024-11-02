@@ -66,6 +66,10 @@ def uniform_conv(img: torch.Tensor, size, pad) -> torch.Tensor:
     return filter.uniform_conv(img, size, pad)
 
 
+def gaussian_conv(img: torch.Tensor, std, size, pad) -> torch.Tensor:
+    return filter.gaussian_conv(img, std, size, pad)
+
+
 if __name__ == "__main__":
     from utils.imgeIO import *
 
@@ -73,9 +77,9 @@ if __name__ == "__main__":
     uni = load_raw('../imgs/rose_uni.raw', 256, 256, 1)
     ori = load_raw('../imgs/rose.raw', 256, 256, 1)
 
-    conv = uniform_conv(ori, 3, 3)
-    compare_imgs([ori, conv])
-    print(conv)
+    conv1 = uniform_conv(ori, 3, 3)
+    conv2 = gaussian_conv(ori, 3.0, 3, 3)
+    compare_imgs([ori, conv1, conv2])
     plt.show()
 
 
