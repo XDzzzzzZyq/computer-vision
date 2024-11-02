@@ -36,17 +36,17 @@ def compare_imgs(images: list, interpolation='nearest'):
         show_img(images[i], interpolation=interpolation, ax=ax)
 
 
-def show_hist(image, bins=256, ax=plt):
+def show_hist(image, bins=256, range=(0, 255), ax=plt):
     if image.ndim == 4:
         image = image[0]
-    ax.hist(image.flatten().detach().cpu().int(), bins=bins, range=(0, 255), color='black', alpha=0.7)
+    ax.hist(image.flatten().detach().cpu().int(), bins=bins, range=range, color='black', alpha=0.7)
 
 
-def compare_hist(images: list, bins=256):
+def compare_hist(images: list, bins=256, range=(0, 255)):
     n = len(images)
     fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(30 * n, 25))
     for i, ax in enumerate(axe):
-        show_hist(images[i], bins=bins, ax=ax)
+        show_hist(images[i], bins=bins, range=range, ax=ax)
 
 
 if __name__ == '__main__':
