@@ -10,9 +10,9 @@
 
 template <typename scalar_t>
 struct pixel{
-    scalar_t r;
-    scalar_t g;
-    scalar_t b;
+    scalar_t r=0;
+    scalar_t g=0;
+    scalar_t b=0;
 
     __host__ __device__ pixel<scalar_t> operator+(scalar_t tar) const {
         return pixel<scalar_t>{r + tar, g + tar, b + tar};

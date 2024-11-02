@@ -26,7 +26,7 @@ scalar_t* make_array(int num, scalar_t def=0){
     scalar_t* ptr;
     cudaMalloc(&ptr, size);
     int block_size = 256;
-    int grid_size = num / block_size;
+    int grid_size = num / block_size + 1;
     init_array<scalar_t><<<grid_size, block_size, 0, stream>>>(
         ptr, num, def
     );

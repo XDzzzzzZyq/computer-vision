@@ -23,6 +23,7 @@ print(">>> Compiling CUDA Operators")
 convert = load_src("convert")
 combine = load_src("combine")
 enhance = load_src("enhance")
+filter = load_src("filter")
 
 
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
@@ -61,6 +62,10 @@ def uniform_equalize(img: torch.Tensor, k) -> torch.Tensor:
     return enhance.uniform_equalize(img, k)
 
 
+def uniform_conv(img: torch.Tensor, size, pad) -> torch.Tensor:
+    return filter.uniform_conv(img, size, pad)
+
+
 if __name__ == "__main__":
     from utils.imgeIO import *
 
@@ -68,9 +73,10 @@ if __name__ == "__main__":
     uni = load_raw('../imgs/rose_uni.raw', 256, 256, 1)
     ori = load_raw('../imgs/rose.raw', 256, 256, 1)
 
-    noise_1 = subtract(ori, gau)
-    noise_2 = subtract(ori, uni)
-
-    compare_imgs([noise_1, noise_2])
+    conv = uniform_conv(ori, 3, 3)
+    compare_imgs([ori, conv])
+    print(conv)
     plt.show()
+
+
 
