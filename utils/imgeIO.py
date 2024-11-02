@@ -42,11 +42,21 @@ def show_hist(image, bins=256, range=(0, 255), ax=plt):
     ax.hist(image.flatten().detach().cpu().int(), bins=bins, range=range, color='black', alpha=0.7)
 
 
-def compare_hist(images: list, bins=256, range=(0, 255)):
+def show_accumulative_hist(image, bins=256, range=(0, 255), ax=plt):
+    if image.ndim == 4:
+        image = image[0]
+    hist_counts, bin_edges = torch.histogram(image.flatten().detach().cpu(), bins=bins)
+    cumulative_counts = torch.cumsum(hist_counts, dim=0)
+    width = (bin_edges[1] - bin_edges[0]).item()
+    ax.bar(bin_edges[1:], cumulative_counts, width=width, align='edge', color='black', alpha=0.7)
+
+
+def compare_hist(images: list, bins=256, range=(0, 255), accu=False):
     n = len(images)
+    hist = show_accumulative_hist if accu else show_hist
     fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(30 * n, 25))
     for i, ax in enumerate(axe):
-        show_hist(images[i], bins=bins, range=range, ax=ax)
+        hist(images[i], bins=bins, range=range, ax=ax)
 
 
 if __name__ == '__main__':
