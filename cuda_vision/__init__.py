@@ -72,9 +72,15 @@ def gaussian_conv(img: torch.Tensor, std, size, pad) -> torch.Tensor:
     assert std > 0.0, "std should be positive"
     return filter.gaussian_conv(img, std, size, pad)
 
+def median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
+    return filter.median_filter(img, size, pad, False)
 
-def pseudo_median(img: torch.Tensor, size, pad) -> torch.Tensor:
-    return filter.pseudo_median(img, size, pad)
+def pseudo_median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
+    return filter.median_filter(img, size, pad, True)
+
+
+def bilateral_filter(img: torch.Tensor, std_s, std_i, size, pad) -> torch.Tensor:
+    return filter.bilateral_filter(img, std_s, std_i, size, pad)
 
 
 if __name__ == "__main__":
@@ -83,8 +89,15 @@ if __name__ == "__main__":
     ori = load_raw('../imgs/rose_color.raw', 256, 256, 3)
     noi = load_raw('../imgs/rose_color_noise.raw', 256, 256, 3)
     noi_r, noi_g, noi_b = noi[:, 0:1], noi[:, 1:2], noi[:, 2:3]
-    filtered0 = pseudo_median(noi_r, 0, 0)
-    filtered1 = pseudo_median(noi_r, 1, 1)
-    filtered2 = pseudo_median(noi_r, 2, 2)
+
+    if True:
+        filtered0 = pseudo_median_filter(noi_g, 0, 0)
+        filtered1 = pseudo_median_filter(noi_g, 1, 1)
+        filtered2 = pseudo_median_filter(noi_g, 2, 2)
+    else:
+        filtered0 = bilateral_filter(noi_g, 1, 1, 0, 0)
+        filtered1 = bilateral_filter(noi_g, 5, 10, 10, 10)
+        filtered2 = bilateral_filter(noi_g, 5, 50, 10, 10)
+
     compare_imgs([filtered0, filtered1, filtered2])
     plt.show()

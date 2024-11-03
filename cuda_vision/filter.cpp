@@ -10,25 +10,35 @@ void gaussian_conv_op(
     const torch::Tensor& image,
     float std, int size, int pad
 );
-void pseudo_median_op(
+void median_filter_op(
     torch::Tensor& result,
     const torch::Tensor& image,
-    int size, int pad
+    int size, int pad, bool pseudo
+);
+void bilateral_filter_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    float std_k, float std_i, int size, int pad
 );
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
-torch::Tensor uniform_conv(const torch::Tensor& image, int size, int pad) {
-    CHECK_INPUT(image);
-
+torch::Tensor get_conv_empty(const torch::Tensor& image, int size, int pad) {
     int b = image.size(0);
     int c = image.size(1);
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
-    torch::Tensor result = torch::empty({b, c, h+2*e, w+2*e}).to(image.device());
+
+    return torch::empty({b, c, h+2*e, w+2*e}).to(image.device());
+}
+
+torch::Tensor uniform_conv(const torch::Tensor& image, int size, int pad) {
+    CHECK_INPUT(image);
+
+    torch::Tensor result = get_conv_empty(image, size, pad);
     uniform_conv_op(result, image, size, pad);
 
     return result;
@@ -36,26 +46,24 @@ torch::Tensor uniform_conv(const torch::Tensor& image, int size, int pad) {
 torch::Tensor gaussian_conv(const torch::Tensor& image, float std, int size, int pad) {
     CHECK_INPUT(image);
 
-    int b = image.size(0);
-    int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    int e = pad - size;
-    torch::Tensor result = torch::empty({b, c, h+2*e, w+2*e}).to(image.device());
+    torch::Tensor result = get_conv_empty(image, size, pad);
     gaussian_conv_op(result, image, std, size, pad);
 
     return result;
 }
-torch::Tensor pseudo_median(const torch::Tensor& image, int size, int pad) {
+torch::Tensor median_filter(const torch::Tensor& image, int size, int pad, bool pseudo) {
     CHECK_INPUT(image);
 
-    int b = image.size(0);
-    int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    int e = pad - size;
-    torch::Tensor result = torch::empty({b, c, h+2*e, w+2*e}).to(image.device());
-    pseudo_median_op(result, image, size, pad);
+    torch::Tensor result = get_conv_empty(image, size, pad);
+    median_filter_op(result, image, size, pad, pseudo);
+
+    return result;
+}
+torch::Tensor bilateral_filter(const torch::Tensor& image, float std_k, float std_i, int size, int pad) {
+    CHECK_INPUT(image);
+
+    torch::Tensor result = get_conv_empty(image, size, pad);
+    bilateral_filter_op(result, image, std_k, std_i, size, pad);
 
     return result;
 }
@@ -63,5 +71,6 @@ torch::Tensor pseudo_median(const torch::Tensor& image, int size, int pad) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("uniform_conv", &uniform_conv, "Uniform Convolution");
     m.def("gaussian_conv", &gaussian_conv, "Gaussian Convolution");
-    m.def("pseudo_median", &pseudo_median, "Pseudo-Median Filter");
+    m.def("median_filter", &median_filter, "Median/Pseudo-Median Filter");
+    m.def("bilateral_filter", &bilateral_filter, "Bilateral Filter");
 }
