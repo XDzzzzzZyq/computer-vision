@@ -45,7 +45,7 @@ def show_hist(image, bins=256, range=(0, 255), ax=plt):
 def show_accumulative_hist(image, bins=256, range=(0, 255), ax=plt):
     if image.ndim == 4:
         image = image[0]
-    hist_counts, bin_edges = torch.histogram(image.flatten().detach().cpu(), bins=bins)
+    hist_counts, bin_edges = torch.histogram(image.flatten().detach().cpu(), bins=bins, range=range)
     cumulative_counts = torch.cumsum(hist_counts, dim=0)
     width = (bin_edges[1] - bin_edges[0]).item()
     ax.bar(bin_edges[1:], cumulative_counts, width=width, align='edge', color='black', alpha=0.7)
