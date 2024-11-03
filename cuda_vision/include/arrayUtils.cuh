@@ -68,13 +68,40 @@ namespace arr{
     }
 
     template <typename scalar_t>
-    __host__ __device__ void sort(scalar_t* array, int num) {
+    __host__ __device__ void swap(scalar_t* data, int i, int j) {
+        scalar_t temp = data[i];
+        data[i] = data[j];
+        data[j] = temp;
+    }
 
+    template <typename scalar_t>
+    __host__ __device__ int partition(scalar_t* data, int left, int right) {
+        scalar_t pivot = data[right];
+        int i = left - 1;
+
+        for (int j = left; j < right; j++) {
+            if (data[j] <= pivot) {
+                i++;
+                arr::swap(data, i, j);
+            }
+        }
+
+        arr::swap(data, i + 1, right);
+        return i + 1;
+    }
+
+    template <typename scalar_t>
+    __host__ __device__ void quicksort(scalar_t* data, int left, int right) {
+        if (left < right) {
+            scalar_t pivot = arr::partition(data, left, right);
+            arr::quicksort(data, left, pivot - 1);
+            arr::quicksort(data, pivot + 1, right);
+        }
     }
 
     template <typename scalar_t>
     __host__ __device__ scalar_t median(scalar_t* array, int num) {
-        arr::sort(array, num);
+        arr::quicksort(array, 0, num);
         return array[(num-1)/2];
     }
 };
