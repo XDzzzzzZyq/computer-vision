@@ -72,8 +72,10 @@ def gaussian_conv(img: torch.Tensor, std, size, pad) -> torch.Tensor:
     assert std > 0.0, "std should be positive"
     return filter.gaussian_conv(img, std, size, pad)
 
+
 def median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
     return filter.median_filter(img, size, pad, False)
+
 
 def pseudo_median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
     return filter.median_filter(img, size, pad, True)

@@ -51,6 +51,23 @@ static __global__ void watermark_kernel(
         set_pixel(result, pixel_mk, x+offset_x, y+offset_y, img_h, img_w);
 }
 
+template <typename scalar_t>
+static __global__ void watermark_gray_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    const scalar_t* mark,
+    int offset_x, int offset_y,
+    int img_h, int img_w
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+
+    scalar_t grayscale_mk = get_value(mark, x, y);
+
+    if(grayscale_mk < 245.0)
+        set_value(result, grayscale_mk, x+offset_x, y+offset_y, img_h, img_w);
+}
+
 // C++ API
 
 void overlay_op(
@@ -89,17 +106,30 @@ void watermark_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
+    int c = image.size(1);
     int h = mark.size(2);
     int w = mark.size(3);
     dim3 grid_size(h, w, 1);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "watermark_kernel", [&] {
-        watermark_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
-            result.data_ptr<scalar_t>(),
-            image.data_ptr<scalar_t>(),
-            mark.data_ptr<scalar_t>(),
-            offset_x, offset_y,
-            image.size(2), image.size(3)
-        );
-    });
+    if (c == 3){
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "watermark_kernel", [&] {
+            watermark_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+                result.data_ptr<scalar_t>(),
+                image.data_ptr<scalar_t>(),
+                mark.data_ptr<scalar_t>(),
+                offset_x, offset_y,
+                image.size(2), image.size(3)
+            );
+        });
+    }else if (c == 1){
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "watermark_gray_kernel", [&] {
+            watermark_gray_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+                result.data_ptr<scalar_t>(),
+                image.data_ptr<scalar_t>(),
+                mark.data_ptr<scalar_t>(),
+                offset_x, offset_y,
+                image.size(2), image.size(3)
+            );
+        });
+    }
 }
