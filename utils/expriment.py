@@ -28,13 +28,14 @@ def search_param2d(target, func, p_range, q_range, steps, criterion=torch.nn.MSE
 
 
 def optimal1d(p_space, error):
-    return p_space[torch.argmin(error)]
+    idx = torch.argmin(error)
+    return p_space[torch.argmin(error)], error[idx]
 
 
 def optimal2d(p_space, q_space, error):
     idx = torch.argmin(error)
     idx = torch.unravel_index(idx, error.shape)
-    return p_space[idx[0]], q_space[idx[1]]
+    return p_space[idx[0]], q_space[idx[1]], error[*idx]
 
 
 if __name__ == '__main__':
