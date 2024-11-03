@@ -1,5 +1,5 @@
 # CUDA Vision
-Open-source Computer Vision Library implemented by CUDA.
+Open-source Computer Vision Library implemented by CUDA. https://github.com/XDzzzzzZyq/computer-vision
 
 ## Introduction
 
@@ -7,7 +7,7 @@ This is an open-source computer vision library developed in Python, utilizing th
 
 ### Image Format
 This library treats images as tensors that strictly follows the shape ```(B,C,H,W)```. Where ```B``` is the batch size, 
-```C``` is channel numbers, ```H,W``` are the height and width of images correspondingly.
+```C``` is the number of channels, ```H,W``` are the height and width of images correspondingly.
 
 Two storage methods are supported, unsigned bytes ranging within ```[0,255]``` or standard ```float32```.
 
