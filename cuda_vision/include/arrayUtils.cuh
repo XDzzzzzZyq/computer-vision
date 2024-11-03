@@ -7,7 +7,6 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
-#include <iostream>
 
 template <typename scalar_t>
 __global__ void init_array(scalar_t* array, int num, scalar_t value) {
@@ -101,20 +100,8 @@ namespace arr{
 
     template <typename scalar_t>
     __host__ __device__ scalar_t median(scalar_t* array, int num) {
-        arr::quicksort(array, 0, num);
+        arr::quicksort(array, 0, num-1);
         return array[(num-1)/2];
     }
 };
 
-template <typename scalar_t>
-void debug_array(const scalar_t* d_array, int size) {
-    scalar_t* h_array = new scalar_t[size];
-
-    cudaMemcpy(h_array, d_array, size * sizeof(scalar_t), cudaMemcpyDeviceToHost);
-
-    for (int i = 0; i < size; i++) {
-        std::cout << "Element " << i << ": " << h_array[i] << std::endl;
-    }
-
-    delete[] h_array;
-}

@@ -11,6 +11,7 @@
 
 #include "pixelUtils.cuh"
 #include "arrayUtils.cuh"
+#include "debugUtils.cuh"
 
 __host__ __device__ float gaus(float x, float std){
     return expf(- (x * x) / (2.0f * std * std)) / (sqrtf(2.0f * M_PI) * std);
@@ -246,6 +247,14 @@ void median_filter_op(
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
+    int n = 2*size+1;
+
+    if(pseudo){
+        cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2*n*n*sizeof(float));
+    }else{
+        cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1*n*n*sizeof(float));
+        cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
+    }
 
     dim3 grid_size(h+2*e, w+2*e, 1);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "median_kernel", [&] {
