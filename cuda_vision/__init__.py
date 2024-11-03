@@ -93,16 +93,16 @@ if __name__ == "__main__":
     noi_r, noi_g, noi_b = noi[:, 0:1], noi[:, 1:2], noi[:, 2:3]
 
     if True:
-        filtered0 = pseudo_median_filter(noi_g, 0, 0)
-        filtered1 = pseudo_median_filter(noi_g, 1, 1)
-        filtered2 = pseudo_median_filter(noi_g, 2, 2)
-        filtered3 = median_filter(noi_g, 1, 1)
-        filtered4 = median_filter(noi_g, 2, 2)
+        filtered0 = pseudo_median_filter(noi_g, 20, 20)
+        #filtered1 = pseudo_median_filter(noi_g, 1, 1)
+        #filtered2 = pseudo_median_filter(noi_g, 15, 15)
+        #filtered3 = median_filter(noi_g, 1, 1)
+        filtered4 = median_filter(noi_g, 10, 10)
     else:
         filtered0 = bilateral_filter(noi_g, 1, 1, 0, 0)
         filtered1 = bilateral_filter(noi_g, 5, 10, 10, 10)
         filtered2 = bilateral_filter(noi_g, 5, 50, 10, 10)
 
-    compare_imgs([filtered0, filtered1, filtered2])
-    compare_imgs([filtered0, filtered3, filtered4])
+    #compare_imgs([filtered0, filtered1, filtered2])
+    compare_imgs([filtered0, filtered4])
     plt.show()
