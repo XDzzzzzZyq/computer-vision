@@ -12,8 +12,8 @@ module_path = os.path.dirname(__file__)
 def load_src(name, verbose=False):
     print(f"--->>> Compiling {name}")
     return load(name,
-                sources=[os.path.join(module_path, f"{name}.cpp"),
-                         os.path.join(module_path, f"{name}_kernel.cu")],
+                sources=[os.path.join(module_path, f"op/{name}.cpp"),
+                         os.path.join(module_path, f"op/{name}_kernel.cu")],
                 extra_include_paths=[os.path.join(module_path, "include")],
                 verbose=verbose)
 
