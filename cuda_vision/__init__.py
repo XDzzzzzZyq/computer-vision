@@ -1,5 +1,5 @@
 if __name__ == "__main__":
-    from utils.imgeIO import *
+    from utils.imageIO import *
     from filters import uniform_conv, custom_conv
 
     ori = load_raw('../imgs/rose_color.raw', 256, 256, 3)
