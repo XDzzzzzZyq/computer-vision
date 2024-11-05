@@ -20,6 +20,11 @@ void bilateral_filter_op(
     const torch::Tensor& image,
     float std_k, float std_i, int size, int pad
 );
+void custom_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& kernel,int pad
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -67,10 +72,21 @@ torch::Tensor bilateral_filter(const torch::Tensor& image, float std_k, float st
 
     return result;
 }
+torch::Tensor custom_conv(const torch::Tensor& image, const torch::Tensor& kernel, int pad) {
+    CHECK_INPUT(image);
+    CHECK_INPUT(kernel);
+
+    int size = kernel.size(0) / 2;
+    torch::Tensor result = get_conv_empty(image, size, pad);
+    custom_conv_op(result, image, kernel.to(torch::kFloat), pad);
+
+    return result;
+}
 
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("uniform_conv", &uniform_conv, "Uniform Convolution");
     m.def("gaussian_conv", &gaussian_conv, "Gaussian Convolution");
     m.def("median_filter", &median_filter, "Median/Pseudo-Median Filter");
     m.def("bilateral_filter", &bilateral_filter, "Bilateral Filter");
+    m.def("custom_conv", &custom_conv, "Convolution with Custom Kernel");
 }

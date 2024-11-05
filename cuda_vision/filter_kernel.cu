@@ -129,6 +129,43 @@ static __global__ void semi_conv_kernel(
 }
 
 template <typename scalar_t>
+static __global__ void full_conv_gray_kernel(
+    scalar_t* result,
+    const scalar_t* gray,
+    const float* kernel,
+    int size, int pad
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int h = gridDim.x;
+    int w = gridDim.y - 2 * (pad - size);
+    int n = size*2+1;
+    extern __shared__ char __shared_buffer[];
+    scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
+
+    int t = threadIdx.x;
+    int i = t / n;
+    int j = t - i * n;
+
+    int im_x = x-pad+i;
+    int im_y = y-pad+j;
+    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
+
+    float weight = kernel[t];
+    buffer[t] = p * weight;
+    __syncthreads();
+
+    if(t != 0)
+        return;
+
+    scalar_t r = 0.0;
+    for(int i = 0; i<(2*size+1)*(2*size+1); i++){
+        r += buffer[i];
+    }
+    set_value(result, r, x, y);
+}
+
+template <typename scalar_t>
 static __global__ void median_kernel(
     scalar_t* result,
     const scalar_t* gray,
@@ -233,6 +270,34 @@ void separable_conv_op(
     }
 }
 
+void full_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const float* kernel,
+    int size, int pad
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = image.size(2);
+    int w = image.size(3);
+    int l = (2*size+1)*(2*size+1);
+    int e = pad - size;
+    dim3 grid_size(h+2*e, w+2*e, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "full_conv_gray_kernel", [&] {
+        full_conv_gray_kernel<scalar_t><<<grid_size, l, l*sizeof(scalar_t), stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            kernel,
+            size, pad
+        );
+    });
+}
+
 void uniform_conv_op(
     torch::Tensor& result,
     const torch::Tensor& image,
@@ -258,6 +323,23 @@ void gaussian_conv_op(
     cudaFree(kernel);
 }
 
+void custom_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& kernel, int pad
+) {
+    int ndim = kernel.dim();
+    int size = kernel.size(0) / 2;
+    switch(ndim){
+    case 1:
+        separable_conv_op(result, image, kernel.data_ptr<float>(), size, pad);
+        break;
+    case 2:
+        full_conv_op(result, image, kernel.data_ptr<float>(), size, pad);
+        break;
+    }
+}
+
 void median_filter_op(
     torch::Tensor& result,
     const torch::Tensor& image,
@@ -273,12 +355,7 @@ void median_filter_op(
     int e = pad - size;
     int n = 2*size+1;
 
-    if(pseudo){
-        //cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2*n*n*sizeof(float));
-    }else{
-        //cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1*n*n*sizeof(float));
-        cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
-    }
+    cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
 
     dim3 grid_size(h+2*e, w+2*e, b);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "median_kernel", [&] {

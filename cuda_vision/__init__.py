@@ -73,6 +73,10 @@ def gaussian_conv(img: torch.Tensor, std, size, pad) -> torch.Tensor:
     return filter.gaussian_conv(img, std, size, pad)
 
 
+def custom_conv(img: torch.Tensor, kernel: torch.Tensor, pad) -> torch.Tensor:
+    return filter.custom_conv(img, kernel, pad)
+
+
 def median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
     return filter.median_filter(img, size, pad, False)
 
@@ -91,18 +95,14 @@ if __name__ == "__main__":
     ori = load_raw('../imgs/rose_color.raw', 256, 256, 3)
     noi = load_raw('../imgs/rose_color_noise.raw', 256, 256, 3)
     noi_r, noi_g, noi_b = noi[:, 0:1], noi[:, 1:2], noi[:, 2:3]
+    noi1 = uniform_conv(noi_r, 2, 2)
 
-    if True:
-        filtered0 = pseudo_median_filter(noi_g, 20, 20)
-        #filtered1 = pseudo_median_filter(noi_g, 1, 1)
-        #filtered2 = pseudo_median_filter(noi_g, 15, 15)
-        #filtered3 = median_filter(noi_g, 1, 1)
-        filtered4 = median_filter(noi_g, 10, 10)
-    else:
-        filtered0 = bilateral_filter(noi_g, 1, 1, 0, 0)
-        filtered1 = bilateral_filter(noi_g, 5, 10, 10, 10)
-        filtered2 = bilateral_filter(noi_g, 5, 50, 10, 10)
+    kernel1 = torch.ones(5).to(noi_r.device) / 5.0
+    kernel2 = torch.ones(5, 5).to(noi_r.device) / 25.0
 
-    #compare_imgs([filtered0, filtered1, filtered2])
-    compare_imgs([filtered0, filtered4])
+    noi2 = custom_conv(noi_r, kernel1, 2)
+    noi3 = custom_conv(noi_r, kernel2, 2)
+
+    compare_imgs([noi1, noi2, noi3, noi_r])
+    #compare_imgs([filtered0, filtered4])
     plt.show()
