@@ -47,7 +47,8 @@ static __global__ void semi_conv_gray_kernel(
     int y = blockIdx.y;
     int h = gridDim.x;
     int w = gridDim.y - 2 * (pad - size);
-    extern __shared__ float shared_buffer[];
+    extern __shared__ char __shared_buffer[];
+    scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
 
     int t = threadIdx.x;
     int im_x = x-pad+t;
@@ -55,7 +56,7 @@ static __global__ void semi_conv_gray_kernel(
     scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
 
     float weight = semi_kernel[t];
-    shared_buffer[t] = p * weight;
+    buffer[t] = p * weight;
     __syncthreads();
 
     if(t != 0)
@@ -63,7 +64,7 @@ static __global__ void semi_conv_gray_kernel(
 
     scalar_t r = 0.0;
     for(int i = 0; i<2*size+1; i++){
-        r += shared_buffer[i];
+        r += buffer[i];
     }
     set_value(result, r, y, x); // transpose
 }
@@ -80,7 +81,8 @@ static __global__ void semi_bilateral_conv_gray_kernel(
     int h = gridDim.x;
     int e = size-pad;
     int w = gridDim.y + 2 * e;
-    extern __shared__ float shared_buffer[];
+    extern __shared__ char __shared_buffer[];
+    scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
 
     int t = threadIdx.x;
     int im_x = x-pad+t;
@@ -90,8 +92,8 @@ static __global__ void semi_bilateral_conv_gray_kernel(
 
     float weight1 = semi_kernel[t];
     float weight2 = gaus(center-p, std);
-    shared_buffer[t]            = p * weight1 * weight2;
-    shared_buffer[t + 2*size+1] = weight1 * weight2;
+    buffer[t]            = p * weight1 * weight2;
+    buffer[t + 2*size+1] = weight1 * weight2;
     __syncthreads();
 
     if(t != 0)
@@ -100,8 +102,8 @@ static __global__ void semi_bilateral_conv_gray_kernel(
     scalar_t r = 0.0;
     scalar_t norm = 0.0;
     for(int i = 0; i<2*size+1; i++){
-        r += shared_buffer[i];
-        norm += shared_buffer[i + 2*size+1];
+        r += buffer[i];
+        norm += buffer[i + 2*size+1];
     }
     r /= norm;
     set_value(result, r, y, x); // transpose
@@ -140,30 +142,35 @@ static __global__ void median_kernel(
     int len = n*n;
     int m = (len+1)/2;
 
-    scalar_t* array = (scalar_t*)malloc(len * sizeof(scalar_t));
-    for(int i = -size; i<size+1; i++){
-        for(int j = -size; j<size+1; j++){
-            int im_x = x+size-pad+i;
-            int im_y = y+size-pad+j;
+    extern __shared__ char __shared_buffer[];
+    scalar_t* array = reinterpret_cast<scalar_t*>(__shared_buffer);
 
-            bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
-            array[(i+size)*n + j+size] = out ? 0.0 : get_value(gray, im_x, im_y, h, w);
-        }
-    }
+    int t = threadIdx.x;
+    int i = t / n;
+    int j = t - i * n;
+
+    int im_x = x-pad+i;
+    int im_y = y-pad+j;
+
+    bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
+    array[t] = out ? 0.0 : get_value(gray, im_x, im_y, h, w);
+    __syncthreads();
+
+    if(t != 0)
+        return;
 
     scalar_t median = 0.0;
     if(pseudo){
         scalar_t* temp  = (scalar_t*)malloc((len-m+1) * sizeof(scalar_t));
-        scalar_t minmax_v = arr::minmax(array, temp, len);
-        scalar_t maxmin_v = arr::maxmin(array, temp, len);
+        scalar_t minmax_v = arr::minmax((scalar_t*)array, temp, len);
+        scalar_t maxmin_v = arr::maxmin((scalar_t*)array, temp, len);
         median = (minmax_v + maxmin_v)/2.0;
         free(temp);
     }else{
-        median = arr::median(array, len);
+        median = arr::median((scalar_t*)array, len);
     }
 
     set_value(result, median, x, y);
-    free(array);
 }
 
 // C++ API
@@ -191,7 +198,7 @@ void separable_conv_op(
 
     if(c == 3){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size1, l, l*sizeof(float), stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size1, l, l*sizeof(scalar_t), stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -199,7 +206,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size2, l, l*sizeof(float), stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size2, l, l*sizeof(scalar_t), stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -208,7 +215,7 @@ void separable_conv_op(
         });
     }else if (c == 1){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size1, l, l*sizeof(float), stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size1, l, l*sizeof(scalar_t), stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -216,7 +223,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size2, l, l*sizeof(float), stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size2, l, l*sizeof(scalar_t), stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -267,15 +274,15 @@ void median_filter_op(
     int n = 2*size+1;
 
     if(pseudo){
-        cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2*n*n*sizeof(float));
+        //cudaDeviceSetLimit(cudaLimitMallocHeapSize, 2*n*n*sizeof(float));
     }else{
-        cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1*n*n*sizeof(float));
+        //cudaDeviceSetLimit(cudaLimitMallocHeapSize, 1*n*n*sizeof(float));
         cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
     }
 
     dim3 grid_size(h+2*e, w+2*e, b);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "median_kernel", [&] {
-        median_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+        median_kernel<scalar_t><<<grid_size, n*n, n*n*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             size, pad, pseudo
@@ -308,7 +315,7 @@ void bilateral_filter_op(
     dim3 grid_size2(h+2*e, w+2*e, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, l, 2*l*sizeof(float), stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, l, 2*l*sizeof(scalar_t), stream>>>(
             temp.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             kernel, std_i,
@@ -322,7 +329,7 @@ void bilateral_filter_op(
     }
     float fact = gau_2 / (2*PI*std_i*std_i + 4*PI*std_k*std_k);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, l, 2*l*sizeof(float), stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, l, 2*l*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
             temp.data_ptr<scalar_t>(),
             kernel, std_i,// / sqrtf(fact),
