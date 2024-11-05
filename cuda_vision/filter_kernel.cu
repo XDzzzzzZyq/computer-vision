@@ -47,17 +47,24 @@ static __global__ void semi_conv_gray_kernel(
     int y = blockIdx.y;
     int h = gridDim.x;
     int w = gridDim.y - 2 * (pad - size);
+    extern __shared__ float shared_buffer[];
+
+    int t = threadIdx.x;
+    int im_x = x-pad+t;
+    int im_y = y+size-pad;
+    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
+
+    float weight = semi_kernel[t];
+    shared_buffer[t] = p * weight;
+    __syncthreads();
+
+    if(t != 0)
+        return;
 
     scalar_t r = 0.0;
-    for(int i = -size; i<size+1; i++){
-        int im_x = x+size-pad+i;
-        int im_y = y+size-pad;
-
-        float weight = semi_kernel[i+size];
-        scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
-        r += p * weight;
+    for(int i = 0; i<2*size+1; i++){
+        r += shared_buffer[i];
     }
-
     set_value(result, r, y, x); // transpose
 }
 
@@ -73,19 +80,28 @@ static __global__ void semi_bilateral_conv_gray_kernel(
     int h = gridDim.x;
     int e = size-pad;
     int w = gridDim.y + 2 * e;
+    extern __shared__ float shared_buffer[];
 
+    int t = threadIdx.x;
+    int im_x = x-pad+t;
+    int im_y = y+size-pad;
     scalar_t center = get_value(gray, x+e, y+e, h, w);
+    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
+
+    float weight1 = semi_kernel[t];
+    float weight2 = gaus(center-p, std);
+    shared_buffer[t]            = p * weight1 * weight2;
+    shared_buffer[t + 2*size+1] = weight1 * weight2;
+    __syncthreads();
+
+    if(t != 0)
+        return;
+
     scalar_t r = 0.0;
     scalar_t norm = 0.0;
-    for(int i = -size; i<size+1; i++){
-        int im_x = x+e+i;
-        int im_y = y+e;
-
-        scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, h, w);
-        float weight1 = semi_kernel[i+size];
-        float weight2 = gaus(center-p, std);
-        r += p * weight1 * weight2;
-        norm += weight1 * weight2;
+    for(int i = 0; i<2*size+1; i++){
+        r += shared_buffer[i];
+        norm += shared_buffer[i + 2*size+1];
     }
     r /= norm;
     set_value(result, r, y, x); // transpose
@@ -167,6 +183,7 @@ void separable_conv_op(
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
+    int l = 2*size+1;
 
     torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
     dim3 grid_size1(h,     w+2*e, b);
@@ -174,7 +191,7 @@ void separable_conv_op(
 
     if(c == 3){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size1, l, l*sizeof(float), stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -182,7 +199,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size2, l, l*sizeof(float), stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -191,7 +208,7 @@ void separable_conv_op(
         });
     }else if (c == 1){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size1, l, l*sizeof(float), stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -199,7 +216,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size2, l, l*sizeof(float), stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -281,6 +298,7 @@ void bilateral_filter_op(
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
+    int l = 2*size+1;
 
     float* kernel = make_array<float>(2*size+1, 0);
     get_gaussian_kernel<<<1, 2*size+1, (2*size+1)*sizeof(float), stream>>>(kernel, std_k, size);
@@ -290,7 +308,7 @@ void bilateral_filter_op(
     dim3 grid_size2(h+2*e, w+2*e, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, l, 2*l*sizeof(float), stream>>>(
             temp.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             kernel, std_i,
@@ -304,10 +322,10 @@ void bilateral_filter_op(
     }
     float fact = gau_2 / (2*PI*std_i*std_i + 4*PI*std_k*std_k);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, l, 2*l*sizeof(float), stream>>>(
             result.data_ptr<scalar_t>(),
             temp.data_ptr<scalar_t>(),
-            kernel, std_i / sqrtf(fact),
+            kernel, std_i,// / sqrtf(fact),
             size, pad
         );
     });
