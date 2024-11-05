@@ -117,19 +117,19 @@ void minmax_scale_op(
     int b = image.size(0);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     int* batched_min = make_array(b, INT_MAX);
     int* batched_max = make_array(b, INT_MIN);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "minmax_kernel", [&] {
-        minmax_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        minmax_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             batched_min, batched_max,
             image.data_ptr<scalar_t>()
         );
     });
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "minmax_scale_kernel", [&] {
-        minmax_scale_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        minmax_scale_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             batched_min, batched_max
@@ -152,13 +152,13 @@ void histo_equal_op(
     int b = image.size(0);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     int* table = make_array(b * 256, 0);
     float* mapping = make_array(b * (k+1), 0.0f);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "histo_kernel", [&] {
-        histo_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        histo_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             table,
             image.data_ptr<scalar_t>()
         );
@@ -169,7 +169,7 @@ void histo_equal_op(
         w, h, k
     );
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "histo_equal_kernel", [&] {
-        histo_equal_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        histo_equal_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             mapping,

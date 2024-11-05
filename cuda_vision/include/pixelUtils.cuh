@@ -51,7 +51,7 @@ static __device__ pixel<scalar_t> get_pixel(
     h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
     int chane_off = h * w;
-    int batch_off = threadIdx.x * chane_off * 3;
+    int batch_off = blockIdx.z * chane_off * 3;
     int loc = y * h + x;
     scalar_t r = image[batch_off + loc];
     scalar_t g = image[batch_off + loc + chane_off];
@@ -68,7 +68,7 @@ static __device__ void set_pixel(
     h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
     int chane_off = h * w;
-    int batch_off = threadIdx.x * chane_off * 3;
+    int batch_off = blockIdx.z * chane_off * 3;
     int loc = y * h + x;
     image[batch_off + loc] = pixel.r;
     image[batch_off + loc + chane_off] = pixel.g;
@@ -82,7 +82,7 @@ static __device__ scalar_t get_value(
 ){
     h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
-    int batch_off = threadIdx.x * h * w;
+    int batch_off = blockIdx.z * h * w;
     return gray[batch_off + y * h + x];
 }
 
@@ -94,6 +94,6 @@ static __device__ void set_value(
 ){
     h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
-    int batch_off = threadIdx.x * h * w;
+    int batch_off = blockIdx.z * h * w;
     gray[batch_off + y * h + x] = value;
 }

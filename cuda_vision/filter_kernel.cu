@@ -169,12 +169,12 @@ void separable_conv_op(
     int e = pad - size;
 
     torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
-    dim3 grid_size1(h,     w+2*e, 1);
-    dim3 grid_size2(h+2*e, w+2*e, 1);
+    dim3 grid_size1(h,     w+2*e, b);
+    dim3 grid_size2(h+2*e, w+2*e, b);
 
     if(c == 3){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size1, b, 0, stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -182,7 +182,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_kernel", [&] {
-            semi_conv_kernel<scalar_t><<<grid_size2, b, 0, stream>>>(
+            semi_conv_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -191,7 +191,7 @@ void separable_conv_op(
         });
     }else if (c == 1){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size1, b, 0, stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
                 temp.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 kernel,
@@ -199,7 +199,7 @@ void separable_conv_op(
             );
         });
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_conv_gray_kernel", [&] {
-            semi_conv_gray_kernel<scalar_t><<<grid_size2, b, 0, stream>>>(
+            semi_conv_gray_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
                 result.data_ptr<scalar_t>(),
                 temp.data_ptr<scalar_t>(),
                 kernel,
@@ -256,9 +256,9 @@ void median_filter_op(
         cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
     }
 
-    dim3 grid_size(h+2*e, w+2*e, 1);
+    dim3 grid_size(h+2*e, w+2*e, b);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "median_kernel", [&] {
-        median_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        median_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             size, pad, pseudo
@@ -266,6 +266,7 @@ void median_filter_op(
     });
 }
 
+#define PI 3.14159265358979323846
 void bilateral_filter_op(
     torch::Tensor& result,
     const torch::Tensor& image,
@@ -285,22 +286,28 @@ void bilateral_filter_op(
     get_gaussian_kernel<<<1, 2*size+1, (2*size+1)*sizeof(float), stream>>>(kernel, std_k, size);
 
     torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
-    dim3 grid_size1(h,     w+2*e, 1);
-    dim3 grid_size2(h+2*e, w+2*e, 1);
+    dim3 grid_size1(h,     w+2*e, b);
+    dim3 grid_size2(h+2*e, w+2*e, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, b, 0, stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size1, 1, 0, stream>>>(
             temp.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             kernel, std_i,
             size, pad
         );
     });
+    float gau_2 = 0.0;
+    for(int i = -size; i<size+1; i++){
+        float gau = gaus(i, std_k);
+        gau_2 += gau * gau;
+    }
+    float fact = gau_2 / (2*PI*std_i*std_i + 4*PI*std_k*std_k);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
-        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, b, 0, stream>>>(
+        semi_bilateral_conv_gray_kernel<scalar_t><<<grid_size2, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             temp.data_ptr<scalar_t>(),
-            kernel, std_i,
+            kernel, std_i / sqrtf(fact),
             size, pad
         );
     });

@@ -83,10 +83,10 @@ void overlay_op(
     int b = im_a.size(0);
     int h = im_a.size(2);
     int w = im_a.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(im_a.scalar_type(), "overlay_kernel", [&] {
-        overlay_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        overlay_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             im_a.data_ptr<scalar_t>(),
             im_b.data_ptr<scalar_t>(),
@@ -109,11 +109,11 @@ void watermark_op(
     int c = image.size(1);
     int h = mark.size(2);
     int w = mark.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     if (c == 3){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "watermark_kernel", [&] {
-            watermark_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+            watermark_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
                 result.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 mark.data_ptr<scalar_t>(),
@@ -123,7 +123,7 @@ void watermark_op(
         });
     }else if (c == 1){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "watermark_gray_kernel", [&] {
-            watermark_gray_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+            watermark_gray_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
                 result.data_ptr<scalar_t>(),
                 image.data_ptr<scalar_t>(),
                 mark.data_ptr<scalar_t>(),

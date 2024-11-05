@@ -21,7 +21,7 @@ static __global__ void to_grayscale_kernel(
     pixel<scalar_t> pixel = get_pixel(image, x, y);
     scalar_t grayscale = 0.299*pixel.r + 0.587*pixel.g + 0.114*pixel.b;
 
-    int batch = threadIdx.x * gridDim.x * gridDim.y;
+    int batch = blockIdx.z * gridDim.x * gridDim.y;
     gray[batch + y * gridDim.x + x] = grayscale;
 }
 
@@ -52,10 +52,10 @@ void to_grayscale_op(
     int b = image.size(0);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "to_grayscale_kernel", [&] {
-        to_grayscale_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        to_grayscale_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             gray.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>()
         );
@@ -73,10 +73,10 @@ void invert_op(
     int b = image.size(0);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, 1);
+    dim3 grid_size(h, w, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "invert_kernel", [&] {
-        invert_kernel<scalar_t><<<grid_size, b, 0, stream>>>(
+        invert_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>()
         );
