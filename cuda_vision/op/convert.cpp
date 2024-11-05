@@ -8,6 +8,11 @@ void invert_op(
     torch::Tensor& result,
     const torch::Tensor& image
 );
+void binarize_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    float threshold
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -34,7 +39,17 @@ torch::Tensor invert(const torch::Tensor& image) {
     return result;
 }
 
+torch::Tensor binarize(const torch::Tensor& image, float threshold) {
+    CHECK_INPUT(image);
+
+    torch::Tensor result = torch::empty_like(image);
+    binarize_op(result, image, threshold);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_grayscale", &to_grayscale, "Convert RGB images to grayscales");
-    m.def("invert", &invert, "Invert RGB color of images");
+    m.def("invert", &invert, "Invert RGB color/grayscale of images");
+    m.def("binarize", &binarize, "Binarize the given images");
 }

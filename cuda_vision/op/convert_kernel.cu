@@ -28,15 +28,43 @@ static __global__ void to_grayscale_kernel(
 template <typename scalar_t>
 static __global__ void invert_kernel(
     scalar_t* result,
-    const scalar_t* image
+    const scalar_t* image,
+    bool rgb
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
 
-    pixel<scalar_t> pixel = get_pixel(image, x, y);
-    pixel = (pixel - 255.) * -1.;
+    if(rgb){
+        pixel<scalar_t> pixel = get_pixel(image, x, y);
+        pixel = (pixel - 255.) * -1.;
+        set_pixel(result, pixel, x, y);
+    }else{
+        scalar_t gray = get_value(image, x, y);
+        gray = (gray - 255.) * -1.;
+        set_value(result, gray, x, y);
+    }
+}
 
-    set_pixel(result, pixel, x, y);
+template <typename scalar_t>
+static __global__ void binarize_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    float threshold, bool rgb
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+
+        if(rgb){
+        pixel<scalar_t> pixel = get_pixel(image, x, y);
+        pixel.r = pixel.r < threshold ? 0.0 : 255.0;
+        pixel.g = pixel.g < threshold ? 0.0 : 255.0;
+        pixel.b = pixel.b < threshold ? 0.0 : 255.0;
+        set_pixel(result, pixel, x, y);
+    }else{
+        scalar_t gray = get_value(image, x, y);
+        gray = gray < threshold ? 0.0 : 255.0;
+        set_value(result, gray, x, y);
+    }
 }
 
 // C++ API
@@ -71,6 +99,7 @@ void invert_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
+    int c = image.size(1);
     int h = image.size(2);
     int w = image.size(3);
     dim3 grid_size(h, w, b);
@@ -78,7 +107,32 @@ void invert_op(
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "invert_kernel", [&] {
         invert_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
-            image.data_ptr<scalar_t>()
+            image.data_ptr<scalar_t>(),
+            c == 3
+        );
+    });
+}
+
+void binarize_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    float threshold
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = image.size(2);
+    int w = image.size(3);
+    dim3 grid_size(h, w, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "binarize_kernel", [&] {
+        binarize_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            threshold, c == 3
         );
     });
 }

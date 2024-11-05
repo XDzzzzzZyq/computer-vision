@@ -10,3 +10,7 @@ def to_grayscale(img: torch.Tensor) -> torch.Tensor:
 
 def invert(img: torch.Tensor) -> torch.Tensor:
     return convert.invert(img)
+
+
+def binarize(img: torch, threshold) -> torch.Tensor:
+    return convert.binarize(img, threshold)
