@@ -82,26 +82,23 @@ template <typename scalar_t>
 static __global__ void histo_equal_kernel(
     scalar_t* result,
     const scalar_t* image,
-    const float* mapping,
-    int k
+    const float* mapping
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int b = threadIdx.x;
+    int b = blockIdx.z;
+    int k = blockDim.x;
+    int i = threadIdx.x;
 
     scalar_t gray = get_value(image, x, y);
     scalar_t scaled = gray;
+    float map_max = mapping[b*(k+1) + i+1];
+    float map_min = mapping[b*(k+1) + i];
 
-    for(int i = 1; i < k+2; i++){
-        if(gray <= mapping[b*(k+1) + i]){
-            int min = mapping[b*(k+1) + i - 1];
-            int max = mapping[b*(k+1) + i];
-            scaled = (gray - min)/(max - min) * 255./k + 255./k*(i-1);
-            break;
-        }
+    if(map_min <= gray && gray < map_max){
+        scaled = (gray - map_min)/(map_max - map_min) * 255./k + 255./k*i;
+        set_value(result, scaled, x, y);
     }
-
-    set_value(result, scaled, x, y);
 }
 
 // C++ API
@@ -169,11 +166,10 @@ void histo_equal_op(
         w, h, k
     );
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "histo_equal_kernel", [&] {
-        histo_equal_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+        histo_equal_kernel<scalar_t><<<grid_size, k, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
-            mapping,
-            k
+            mapping
         );
     });
 

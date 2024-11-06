@@ -3,7 +3,7 @@ import combine
 import torch
 
 
-def get_gradient_kernel(type='pixel_difference'):
+def get_gradient_kernel(type='pixel_diff'):
     if type == 'pixel_diff':
         row = torch.tensor([[0, 0, 0], [0, 1, -1], [0, 0, 0]])
         col = row.transpose(1, 0).contiguous()
