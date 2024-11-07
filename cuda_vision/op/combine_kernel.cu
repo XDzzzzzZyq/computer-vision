@@ -11,26 +11,45 @@
 #include "pixelUtils.cuh"
 
 template <typename scalar_t>
+__host__ __device__ scalar_t _math(scalar_t a, scalar_t b, int code) {
+    scalar_t r = 0;
+    switch(code){
+    case 0: r = a + a; break;
+    case 1: r = a - a; break;
+    case 2: r = a * a; break;
+    case 3: r = a / a; break;
+    case 4: r = sqrtf(a*a + b*b);
+    }
+    return r;
+}
+
+template <typename scalar_t>
 static __global__ void overlay_kernel(
     scalar_t* result,
     const scalar_t* a,
     const scalar_t* b,
-    int code
+    int code, bool rgb
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
 
-    pixel<scalar_t> pix_a = get_pixel(a, x, y);
-    pixel<scalar_t> pix_b = get_pixel(b, x, y);
-    pixel<scalar_t> pix_c;
+    if(rgb){
+        pixel<scalar_t> pix_a = get_pixel(a, x, y);
+        pixel<scalar_t> pix_b = get_pixel(b, x, y);
+        pixel<scalar_t> pix_c;
 
-    switch(code){
-    case 0: pix_c = pix_a + pix_b; break;
-    case 1: pix_c = pix_a - pix_b; break;
-    case 2: pix_c = pix_a * pix_b; break;
-    case 3: pix_c = pix_a / pix_b; break;
+        pix_c.r = _math(pix_a.r, pix_b.r, code);
+        pix_c.g = _math(pix_a.g, pix_b.g, code);
+        pix_c.b = _math(pix_a.b, pix_b.b, code);
+
+        set_pixel(result, pix_c, x, y);
+    }else{
+        scalar_t pix_a = get_value(a, x, y);
+        scalar_t pix_b = get_value(b, x, y);
+        scalar_t pix_c = _math(pix_a, pix_b, code);
+
+        set_value(result, pix_c, x, y);
     }
-    set_pixel(result, pix_c, x, y);
 }
 
 template <typename scalar_t>
@@ -81,6 +100,7 @@ void overlay_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = im_a.size(0);
+    int c = im_a.size(1);
     int h = im_a.size(2);
     int w = im_a.size(3);
     dim3 grid_size(h, w, b);
@@ -90,7 +110,7 @@ void overlay_op(
             result.data_ptr<scalar_t>(),
             im_a.data_ptr<scalar_t>(),
             im_b.data_ptr<scalar_t>(),
-            code
+            code, c==3
         );
     });
 }
