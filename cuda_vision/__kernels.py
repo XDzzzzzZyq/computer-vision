@@ -29,5 +29,7 @@ def get_laplacian_kernel(type='pixel_diff'):
         lap = torch.tensor([[0, -1, 0], [-1, 4, -1], [0, -1, 0]]) / 4
     elif type == 'prewitt':
         lap = torch.tensor([[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]) / 8
+    else:
+        lap = torch.tensor([[0, 0, 0], [0, 1, 0], [0, 0, 0]])
 
     return lap.float().cuda()

@@ -1,16 +1,16 @@
 import torch
 from __compile import load_src
 
-convert = load_src("convert")
+_convert = load_src("convert")
 
 
 def to_grayscale(img: torch.Tensor) -> torch.Tensor:
-    return convert.to_grayscale(img)
+    return _convert.to_grayscale(img)
 
 
 def invert(img: torch.Tensor) -> torch.Tensor:
-    return convert.invert(img)
+    return _convert.invert(img)
 
 
 def binarize(img: torch, threshold) -> torch.Tensor:
-    return convert.binarize(img, threshold)
+    return _convert.binarize(img, threshold)
