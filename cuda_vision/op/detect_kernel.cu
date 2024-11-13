@@ -41,8 +41,8 @@ static __global__ void zero_crossing_kernel(
     case 1:
         int i = t / 3;
         int j = t % 3;
-        im_x += -1+j;
-        im_y += -1+i;
+        im_x += j-1;
+        im_y += i-1;
         break;
     }
     bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
@@ -62,7 +62,11 @@ static __global__ void zero_crossing_kernel(
         cross = ZERO(1, 0) || ZERO(3, 2);
         break;
     case 1:
-        cross = ZERO(1, 7) || ZERO(3, 5) || ZERO(0, 8) || ZERO(2, 6);
+        bool e1 = ZERO(1, 7);
+        bool e2 = ZERO(3, 5);
+        bool e3 = ZERO(0, 8);
+        bool e4 = ZERO(2, 6);
+        cross = (int(e1)+int(e2)+int(e3)+int(e4)) >= 2;
         break;
     }
     scalar_t edge = cross ? 255.0 : 0;
