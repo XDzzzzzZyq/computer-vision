@@ -18,7 +18,7 @@ __host__ __device__ scalar_t _math(scalar_t a, scalar_t b, int code) {
     case 1: r = a - a; break;
     case 2: r = a * a; break;
     case 3: r = a / a; break;
-    case 4: r = sqrtf(a*a + b*b);
+    case 4: r = sqrtf(a*a + b*b); break;
     }
     return r;
 }
