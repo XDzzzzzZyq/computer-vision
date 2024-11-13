@@ -87,6 +87,21 @@ static __global__ void watermark_gray_kernel(
         set_value(result, grayscale_mk, x+offset_x, y+offset_y, img_h, img_w);
 }
 
+template <typename scalar_t>
+static __global__ void clamp_gray_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    float low, float high
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+
+    scalar_t gray = get_value(image, x, y);
+    scalar_t clamped = gray < low ? low : (gray > high ? high : gray);
+
+    set_value(result, clamped, x, y);
+}
+
 // C++ API
 
 void overlay_op(
@@ -153,3 +168,28 @@ void watermark_op(
         });
     }
 }
+
+void clamp_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    float low, float high
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = mark.size(2);
+    int w = mark.size(3);
+    dim3 grid_size(h, w, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(im_a.scalar_type(), "clamp_gray_kernel", [&] {
+        clamp_gray_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            low, high
+        );
+    });
+}
+

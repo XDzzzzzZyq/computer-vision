@@ -38,5 +38,9 @@ def lor(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     return c
 
 
+def clamp(img: torch.Tensor, low, high) -> torch.Tensor:
+    return _combine.clamp(img, low, high)
+
+
 def make_watermark(img: torch.Tensor, mark: torch.Tensor, offset=(0, 0)) -> torch.Tensor:
     return _combine.watermark(img, mark, offset[0], offset[1])
