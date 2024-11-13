@@ -95,7 +95,7 @@ static __global__ void histo_equal_kernel(
     float map_max = mapping[b*(k+1) + i+1];
     float map_min = mapping[b*(k+1) + i];
 
-    if(map_min <= gray && gray < map_max){
+    if(map_min <= gray && gray <= map_max){
         scaled = (gray - map_min)/(map_max - map_min) * 255./k + 255./k*i;
         set_value(result, scaled, x, y);
     }

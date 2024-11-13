@@ -16,7 +16,7 @@ void clamp_op(
     torch::Tensor& result,
     const torch::Tensor& image,
     float low, float high
-)
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -44,7 +44,6 @@ torch::Tensor watermark(const torch::Tensor& image, const torch::Tensor& mark, i
 
 torch::Tensor clamp(const torch::Tensor& image, float low, float high) {
     CHECK_INPUT(image);
-    CHECK_INPUT(mark);
 
     torch::Tensor result = image.clone();
     clamp_op(result, image, low, high);

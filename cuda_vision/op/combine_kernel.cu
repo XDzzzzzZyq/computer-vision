@@ -14,10 +14,10 @@ template <typename scalar_t>
 __host__ __device__ scalar_t _math(scalar_t a, scalar_t b, int code) {
     scalar_t r = 0;
     switch(code){
-    case 0: r = a + a; break;
-    case 1: r = a - a; break;
-    case 2: r = a * a; break;
-    case 3: r = a / a; break;
+    case 0: r = a + b; break;
+    case 1: r = a - b; break;
+    case 2: r = a * b; break;
+    case 3: r = a / b; break;
     case 4: r = sqrtf(a*a + b*b); break;
     }
     return r;
@@ -180,11 +180,11 @@ void clamp_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = mark.size(2);
-    int w = mark.size(3);
+    int h = image.size(2);
+    int w = image.size(3);
     dim3 grid_size(h, w, b);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(im_a.scalar_type(), "clamp_gray_kernel", [&] {
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "clamp_gray_kernel", [&] {
         clamp_gray_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
