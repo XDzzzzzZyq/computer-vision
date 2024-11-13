@@ -31,7 +31,7 @@ def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
 
 def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest'):
     n = len(images)
-    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(25 * n, 25))
+    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(10 * n, 10))
     for i, ax in enumerate(axe):
         show_img(images[i], range=range, interpolation=interpolation, ax=ax)
 
@@ -54,7 +54,7 @@ def show_accumulative_hist(image, bins=256, range=(0, 255), ax=plt):
 def compare_hist(images: list, bins=256, range=(0, 255), accu=False):
     n = len(images)
     hist = show_accumulative_hist if accu else show_hist
-    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(30 * n, 25))
+    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(12 * n, 10))
     for i, ax in enumerate(axe):
         hist(images[i], bins=bins, range=range, ax=ax)
 
