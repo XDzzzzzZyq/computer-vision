@@ -22,18 +22,18 @@ def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
     return image.to(device).float()
 
 
-def show_img(image, interpolation='nearest', ax=plt):
+def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
     if image.ndim == 4:
         image = image[0]
-    ax.imshow(image.transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=0.0, vmax=255.0,
+    ax.imshow(image.transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=range[0], vmax=range[1],
               interpolation=interpolation)
 
 
-def compare_imgs(images: list, interpolation='nearest'):
+def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest'):
     n = len(images)
     fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(25 * n, 25))
     for i, ax in enumerate(axe):
-        show_img(images[i], interpolation=interpolation, ax=ax)
+        show_img(images[i], range=range, interpolation=interpolation, ax=ax)
 
 
 def show_hist(image, bins=256, range=(0, 255), ax=plt):
