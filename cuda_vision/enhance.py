@@ -1,6 +1,5 @@
-import matplotlib.pyplot as plt
 import torch
-from __compile import load_src
+from cuda_vision.__compile import load_src
 
 _enhance = load_src("enhance")
 

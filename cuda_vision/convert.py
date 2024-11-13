@@ -1,5 +1,5 @@
 import torch
-from __compile import load_src
+from cuda_vision.__compile import load_src
 
 _convert = load_src("convert")
 
