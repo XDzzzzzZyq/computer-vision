@@ -27,3 +27,9 @@ def pseudo_median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
 
 def bilateral_filter(img: torch.Tensor, std_s, std_i, size, pad) -> torch.Tensor:
     return _filter.bilateral_filter(img, std_s, std_i, size, pad)
+
+
+def conditional_match(img: torch.Tensor, type) -> torch.Tensor:
+    from cuda_vision.__kernels import get_conditional_patterns
+    patterns = get_conditional_patterns(type).to(img.dtype)
+    return _filter.conditional_match(img, patterns)
