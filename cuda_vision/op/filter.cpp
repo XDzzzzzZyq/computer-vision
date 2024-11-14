@@ -25,10 +25,11 @@ void custom_conv_op(
     const torch::Tensor& image,
     const torch::Tensor& kernel,int pad
 );
-void conditional_match_op(
+void pattern_match_op(
     torch::Tensor& mark,
     const torch::Tensor& image,
-    const torch::Tensor& pattern
+    const torch::Tensor& pattern,
+    bool cond
 );
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
@@ -87,12 +88,12 @@ torch::Tensor custom_conv(const torch::Tensor& image, const torch::Tensor& kerne
 
     return result;
 }
-torch::Tensor conditional_match(const torch::Tensor& image, const torch::Tensor& patterns) {
+torch::Tensor pattern_match(const torch::Tensor& image, const torch::Tensor& patterns, bool cond) {
     CHECK_INPUT(image);
     CHECK_INPUT(patterns);
 
     torch::Tensor mark = torch::empty_like(image);
-    conditional_match_op(mark, image, patterns);
+    pattern_match_op(mark, image, patterns, cond);
 
     return mark;
 }
@@ -103,5 +104,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("median_filter", &median_filter, "Median/Pseudo-Median Filter");
     m.def("bilateral_filter", &bilateral_filter, "Bilateral Filter");
     m.def("custom_conv", &custom_conv, "Convolution with Custom Kernel");
-    m.def("conditional_match", &conditional_match, "Conditional Match the Pattern");
+    m.def("pattern_match", &pattern_match, "Match the Pattern");
 }

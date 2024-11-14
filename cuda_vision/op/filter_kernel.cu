@@ -253,6 +253,63 @@ static __global__ void conditional_match_kernel(
     set_value(mark, v, x, y);
 }
 
+template <typename scalar_t>
+static __global__ void unconditional_match_kernel(
+    scalar_t* mark,
+    const scalar_t* image,
+    const scalar_t* patterns
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int h = gridDim.x;
+    int w = gridDim.y;
+    int n = blockDim.x;
+
+    extern __shared__ char __shared_buffer[];
+    scalar_t storage[9];
+    for(int i = 0; i<3; i++){
+        for(int j = 0; j<3; j++){
+            int im_x = x+j-1;
+            int im_y = y+i-1;
+            bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
+            storage[i*3+j] = out ? 0.0 : get_value(image, im_x, im_y);
+        }
+    }
+
+    int t = threadIdx.x;
+    bool match = true;
+    bool use_abc = false;
+    int abc_count = 0;
+    for(int i = 0; i<9; i++){
+        int p = int(patterns[t*9+i]);
+        switch(p){
+        case 1:
+        case 0:
+            match &= p*255.0 == storage[i];
+            break;
+        case -1:
+            continue;
+        case -2:
+            use_abc = true;
+            abc_count += storage[i]==255. ? 1 : 0;
+        }
+    }
+    match &= !use_abc || (use_abc && abc_count>0);
+
+    __shared_buffer[t] = char(match);
+    __syncthreads();
+
+    if(t != 0)
+        return;
+
+    match = false;
+    for(int i = 0; i<n; i++){
+        match |= __shared_buffer[i] == 1;
+    }
+    scalar_t v = match ? 255.0 : 0;
+    set_value(mark, v, x, y);
+}
+
 // C++ API
 
 void separable_conv_op(
@@ -458,10 +515,11 @@ void bilateral_filter_op(
     });
 }
 
-void conditional_match_op(
+void pattern_match_op(
     torch::Tensor& mark,
     const torch::Tensor& image,
-    const torch::Tensor& pattern
+    const torch::Tensor& pattern,
+    bool cond
 ) {
     int curDevice = -1;
     cudaGetDevice(&curDevice);
@@ -474,11 +532,22 @@ void conditional_match_op(
 
     dim3 grid_size(h, w, b);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "conditional_match_kernel", [&] {
-        conditional_match_kernel<scalar_t><<<grid_size, n, n*sizeof(char), stream>>>(
-            mark.data_ptr<scalar_t>(),
-            image.data_ptr<scalar_t>(),
-            pattern.data_ptr<scalar_t>()
-        );
-    });
+    if(cond){
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "conditional_match_kernel", [&] {
+            conditional_match_kernel<scalar_t><<<grid_size, n, n*sizeof(char), stream>>>(
+                mark.data_ptr<scalar_t>(),
+                image.data_ptr<scalar_t>(),
+                pattern.data_ptr<scalar_t>()
+            );
+        });
+    }else{
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "unconditional_match_kernel", [&] {
+            unconditional_match_kernel<scalar_t><<<grid_size, n, n*sizeof(char), stream>>>(
+                mark.data_ptr<scalar_t>(),
+                image.data_ptr<scalar_t>(),
+                pattern.data_ptr<scalar_t>()
+            );
+        });
+    }
+
 }
