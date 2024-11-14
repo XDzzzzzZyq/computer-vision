@@ -233,6 +233,11 @@ static __global__ void conditional_match_kernel(
         }
     }
 
+    if (storage[4] == 0.0){
+        set_value(mark, scalar_t(0.0), x, y);
+        return;
+    }
+
     int t = threadIdx.x;
     bool match = true;
     for(int i = 0; i<9; i++){
@@ -274,6 +279,11 @@ static __global__ void unconditional_match_kernel(
             bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
             storage[i*3+j] = out ? 0.0 : get_value(image, im_x, im_y);
         }
+    }
+
+    if (storage[4] == 0.0){
+        set_value(mark, scalar_t(0.0), x, y);
+        return;
     }
 
     int t = threadIdx.x;
