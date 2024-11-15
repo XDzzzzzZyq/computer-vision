@@ -221,3 +221,17 @@ def get_unconditional_patterns(type):
         p = torch.ones(1, 3, 3)
 
     return p
+
+
+def get_dither_matrix(n):
+    if n == 2:
+        index = torch.Tensor([[1, 2], [3, 0]])
+    else:
+        index1 = get_dither_matrix(n // 2) * 4 + 1
+        index2 = get_dither_matrix(n // 2) * 4 + 2
+        index3 = get_dither_matrix(n // 2) * 4 + 3
+        index4 = get_dither_matrix(n // 2) * 4 + 0
+        col1, col2 = torch.cat([index1, index3]), torch.cat([index2, index4])
+        index = torch.cat([col1, col2], dim=1)
+
+    return index
