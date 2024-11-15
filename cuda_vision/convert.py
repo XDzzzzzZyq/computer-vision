@@ -12,5 +12,5 @@ def invert(img: torch.Tensor) -> torch.Tensor:
     return _convert.invert(img)
 
 
-def binarize(img: torch, threshold) -> torch.Tensor:
-    return _convert.binarize(img, threshold)
+def threshold(img: torch, threshold) -> torch.Tensor:
+    return _convert.threshold(img, threshold)

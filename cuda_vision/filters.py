@@ -53,8 +53,7 @@ def morphology(img: torch.Tensor, type) -> torch.Tensor:
         prsv = pattern_match(mark, type=type, cond=False)
 
         # G = X \cap (\not M \cup P)
-        mark = convert.invert(mark)
-        m_cp = combine.lor(mark, prsv)
+        m_cp = combine.lor(convert.invert(mark), prsv)
         g = combine.land(img, m_cp)
     else:
         g = img

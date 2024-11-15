@@ -8,7 +8,7 @@ void invert_op(
     torch::Tensor& result,
     const torch::Tensor& image
 );
-void binarize_op(
+void threshold_op(
     torch::Tensor& result,
     const torch::Tensor& image,
     float threshold
@@ -39,11 +39,11 @@ torch::Tensor invert(const torch::Tensor& image) {
     return result;
 }
 
-torch::Tensor binarize(const torch::Tensor& image, float threshold) {
+torch::Tensor threshold(const torch::Tensor& image, float threshold) {
     CHECK_INPUT(image);
 
     torch::Tensor result = torch::empty_like(image);
-    binarize_op(result, image, threshold);
+    threshold_op(result, image, threshold);
 
     return result;
 }
@@ -51,5 +51,5 @@ torch::Tensor binarize(const torch::Tensor& image, float threshold) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_grayscale", &to_grayscale, "Convert RGB images to grayscales");
     m.def("invert", &invert, "Invert RGB color/grayscale of images");
-    m.def("binarize", &binarize, "Binarize the given images");
+    m.def("threshold", &threshold, "Binarize the given images with fixed Threshold");
 }

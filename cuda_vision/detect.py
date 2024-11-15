@@ -18,7 +18,7 @@ def gradient_edge_detect(img: torch.Tensor, threshold, type):
     from cuda_vision import combine, convert
     grad_x, grad_y = gradient_conv(img, type)
     grad = combine.length(grad_x, grad_y)
-    edge = convert.binarize(grad, threshold)
+    edge = convert.threshold(grad, threshold)
     return edge
 
 

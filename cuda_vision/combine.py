@@ -27,14 +27,14 @@ def length(x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
 def land(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     from cuda_vision import convert
     c = multiply(a, b)
-    c = convert.binarize(c, 254.9)
+    c = convert.threshold(c, 254.9)
     return c
 
 
 def lor(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     from cuda_vision import convert
     c = add(a, b)
-    c = convert.binarize(c, 254.9)
+    c = convert.threshold(c, 254.9)
     return c
 
 

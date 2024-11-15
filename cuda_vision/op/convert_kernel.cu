@@ -46,7 +46,7 @@ static __global__ void invert_kernel(
 }
 
 template <typename scalar_t>
-static __global__ void binarize_kernel(
+static __global__ void threshold_kernel(
     scalar_t* result,
     const scalar_t* image,
     float threshold, bool rgb
@@ -113,7 +113,7 @@ void invert_op(
     });
 }
 
-void binarize_op(
+void threshold_op(
     torch::Tensor& result,
     const torch::Tensor& image,
     float threshold
@@ -128,8 +128,8 @@ void binarize_op(
     int w = image.size(3);
     dim3 grid_size(h, w, b);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "binarize_kernel", [&] {
-        binarize_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "threshold_kernel", [&] {
+        threshold_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             threshold, c == 3
