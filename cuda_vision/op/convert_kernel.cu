@@ -86,6 +86,21 @@ static __global__ void threshold_kernel(
     }
 }
 
+template <typename scalar_t>
+static __global__ void random_threshold_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    const scalar_t* noise
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+
+    scalar_t gray = get_value(image, x, y);
+    scalar_t rand = get_value(noise, x, y);
+    gray = rand < gray ? 255.0 : 0.0;
+    set_value(result, gray, x, y);
+}
+
 // C++ API
 
 void to_grayscale_op(
@@ -176,6 +191,30 @@ void threshold_op(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             threshold, c == 3
+        );
+    });
+}
+
+void random_threshold_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& noise
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = image.size(2);
+    int w = image.size(3);
+    dim3 grid_size(h, w, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "random_threshold_kernel", [&] {
+        random_threshold_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            noise.data_ptr<scalar_t>()
         );
     });
 }

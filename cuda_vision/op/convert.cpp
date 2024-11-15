@@ -18,6 +18,11 @@ void threshold_op(
     const torch::Tensor& image,
     float threshold
 );
+void random_threshold_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& noise
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -62,9 +67,20 @@ torch::Tensor threshold(const torch::Tensor& image, float threshold) {
     return result;
 }
 
+torch::Tensor random_threshold(const torch::Tensor& image, const torch::Tensor& noise) {
+    CHECK_INPUT(image);
+    CHECK_INPUT(noise);
+
+    torch::Tensor result = torch::empty_like(image);
+    random_threshold_op(result, image, noise);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_grayscale", &to_grayscale, "Convert RGB images to grayscales");
     m.def("invert", &invert, "Invert RGB color/grayscale of images");
     m.def("hash", &hash, "Return uniform distributed white noise");
     m.def("threshold", &threshold, "Binarize the given images with fixed Threshold");
+    m.def("random_threshold", &random_threshold, "Random Binarize the given images by grayscale");
 }
