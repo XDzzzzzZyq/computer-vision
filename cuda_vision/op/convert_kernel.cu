@@ -101,6 +101,28 @@ static __global__ void random_threshold_kernel(
     set_value(result, gray, x, y);
 }
 
+template <typename scalar_t>
+static __global__ void matrix_dither_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    const scalar_t* index,
+    int n
+) {
+    int h = gridDim.x * n;
+    int w = gridDim.y * n;
+    int t = threadIdx.x;
+    int bx = t % n;
+    int by = t / n;
+    int x = blockIdx.x * n + bx;
+    int y = blockIdx.y * n + by;
+
+    scalar_t gray = get_value(image, x, y, h, w);
+    scalar_t indx = index[by * n + bx];
+    scalar_t thrs = (indx+0.5) / (n*n) * 255.0;
+    gray = gray > thrs ? 255.0 : 0.0;
+    set_value(result, gray, x, y, h, w);
+}
+
 // C++ API
 
 void to_grayscale_op(
@@ -215,6 +237,31 @@ void random_threshold_op(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             noise.data_ptr<scalar_t>()
+        );
+    });
+}
+
+void matrix_dither_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& index
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int h = image.size(2);
+    int w = image.size(3);
+    int n = index.size(0);
+    dim3 grid_size(h/n, w/n, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "matrix_dither_kernel", [&] {
+        matrix_dither_kernel<scalar_t><<<grid_size, n*n, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            index.data_ptr<scalar_t>(),
+            n
         );
     });
 }

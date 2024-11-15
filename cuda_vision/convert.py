@@ -26,10 +26,18 @@ def threshold(img: torch, threshold) -> torch.Tensor:
 def random_threshold(img: torch, type, std=127.5, seed=123, step=2) -> torch.Tensor:
     if type == 'uniform':
         noise = hash(img, step=step, seed=seed)
-        noise = (noise-127.5) * std*(12**0.5)/255.0 + 127.5
+        noise = (noise - 127.5) * std * (12 ** 0.5) / 255.0 + 127.5
     elif type == 'gaussian':
         noise = torch.randn_like(img) * std + 127.5
         noise = torch.clamp(noise, 0.0, 255.0)
     else:
         noise = torch.randn_like(img)
     return _convert.random_threshold(img, noise)
+
+
+def matrix_dither(img: torch.Tensor, n) -> torch.Tensor:
+    from cuda_vision.__kernels import get_dither_matrix
+    assert n % 2 == 0
+    assert img.shape[2] % n == 0 and img.shape[3] % n == 0
+    index = get_dither_matrix(n).to(img.device).to(img.dtype)
+    return _convert.matrix_dither(img, index)
