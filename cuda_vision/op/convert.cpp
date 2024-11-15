@@ -8,6 +8,11 @@ void invert_op(
     torch::Tensor& result,
     const torch::Tensor& image
 );
+void hash_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int seed
+);
 void threshold_op(
     torch::Tensor& result,
     const torch::Tensor& image,
@@ -39,6 +44,15 @@ torch::Tensor invert(const torch::Tensor& image) {
     return result;
 }
 
+torch::Tensor hash(const torch::Tensor& image, int seed) {
+    CHECK_INPUT(image);
+
+    torch::Tensor result = torch::empty_like(image);
+    hash_op(result, image, seed);
+
+    return result;
+}
+
 torch::Tensor threshold(const torch::Tensor& image, float threshold) {
     CHECK_INPUT(image);
 
@@ -51,5 +65,6 @@ torch::Tensor threshold(const torch::Tensor& image, float threshold) {
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_grayscale", &to_grayscale, "Convert RGB images to grayscales");
     m.def("invert", &invert, "Invert RGB color/grayscale of images");
+    m.def("hash", &hash, "Return uniform distributed white noise");
     m.def("threshold", &threshold, "Binarize the given images with fixed Threshold");
 }

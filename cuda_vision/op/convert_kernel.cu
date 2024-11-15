@@ -7,6 +7,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cmath>
 
 #include "pixelUtils.cuh"
 
@@ -43,6 +44,24 @@ static __global__ void invert_kernel(
         gray = (gray - 255.) * -1.;
         set_value(result, gray, x, y);
     }
+}
+
+template <typename scalar_t>
+static __global__ void hash_kernel(
+    scalar_t* result,
+    const scalar_t* image,
+    int seed,
+    int prime=982451653
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int mod = pow(10,9) + 7;
+
+    int coor_seed = ((y * gridDim.x + x + seed) * prime) % 255;
+    scalar_t gray = get_value(image, x, y);
+    gray = fmod((gray + coor_seed) * prime, scalar_t(mod));
+    gray/= mod/255.0;
+    set_value(result, gray, x, y);
 }
 
 template <typename scalar_t>
@@ -109,6 +128,30 @@ void invert_op(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             c == 3
+        );
+    });
+}
+
+void hash_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int seed
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = image.size(2);
+    int w = image.size(3);
+    dim3 grid_size(h, w, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "hash_kernel", [&] {
+        hash_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            seed
         );
     });
 }
