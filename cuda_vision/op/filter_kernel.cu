@@ -229,7 +229,7 @@ static __global__ void conditional_match_kernel(
             int im_x = x+j-1;
             int im_y = y+i-1;
             bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
-            storage[i*3+j] = out ? 0.0 : get_value(image, im_x, im_y);
+            storage[i*3+j] = out ? 255.0 : get_value(image, im_x, im_y);
         }
     }
 

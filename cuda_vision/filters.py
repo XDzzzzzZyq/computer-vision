@@ -63,6 +63,12 @@ def morphology(img: torch.Tensor, type) -> torch.Tensor:
         g = convert.invert(img)
         g = morphology(g, 'e')
         g = convert.invert(g)
+    elif type in ['O', 'o', 'open']:
+        g = morphology(img, 'e')
+        g = morphology(g,   'd')
+    elif type in ['C', 'c', 'close']:
+        g = morphology(img, 'd')
+        g = morphology(g,   'e')
     else:
         g = img
 

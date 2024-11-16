@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     img = load_raw("../imgs/pcb.raw", 256, 256, 1)
     img = invert(img)
-    d = morphology(img, 'd')
-    e = morphology(img, 'e')
-    compare_imgs([img, d, e])
+    o = morphology(img, 'o')
+    c = morphology(img, 'c')
+    compare_imgs([img, o, c])
     plt.show()
