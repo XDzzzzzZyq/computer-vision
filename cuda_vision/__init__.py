@@ -1,10 +1,13 @@
+import matplotlib.pyplot as plt
+
 if __name__ == "__main__":
     from utils.imageIO import *
-    from cuda_vision.convert import matrix_dither
+    from cuda_vision.filters import morphology
+    from cuda_vision.convert import invert
 
-    img = load_raw("../imgs/barbara.raw", 256, 256, 1)
-    dit1 = matrix_dither(img, 2)
-    dit2 = matrix_dither(img, 4)
-
-    compare_imgs([img, dit1, dit2])
+    img = load_raw("../imgs/pcb.raw", 256, 256, 1)
+    img = invert(img)
+    d = morphology(img, 'd')
+    e = morphology(img, 'e')
+    compare_imgs([img, d, e])
     plt.show()

@@ -55,6 +55,14 @@ def morphology(img: torch.Tensor, type) -> torch.Tensor:
         # G = X \cap (\not M \cup P)
         m_cp = combine.lor(convert.invert(mark), prsv)
         g = combine.land(img, m_cp)
+    elif type in ['E', 'e', 'erode']:
+        patterns = torch.ones(1, 3, 3).to(img.dtype).to(img.device)
+        g = _filter.pattern_match(img, patterns, True)
+    elif type in ['D', 'd', 'dilate']:
+        from cuda_vision import convert
+        g = convert.invert(img)
+        g = morphology(g, 'e')
+        g = convert.invert(g)
     else:
         g = img
 
