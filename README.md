@@ -17,42 +17,45 @@ All CUDA operators will be complied during run-time. Take grays-cale conversion 
 
 ```python
 from cuda_vision.convert import to_grayscale
+from cuda_vision.enhance import uniform_equalize
+from cuda_vision.filters import bilateral_filter
 from utils.imageIO import load_raw, compare_imgs
 
 img = load_raw('imgs/building2_color.raw', 256, 256, 3)
-gray = to_grayscale(img)
-compare_imgs([img, gray])
+gray1 = to_grayscale(img)
+gray2 = uniform_equalize(gray1, 64)
+gray3 = bilateral_filter(gray2, 10.0, 50.0, 20, 20)
+compare_imgs([img, gray1, gray2, gray3])
 ```
 
 The following functionalities are supported:
 
 `convert`
-- `to_grayscale(img: torch.Tensor)` 
 
-- `invert(img: torch.Tensor)`
+- Grayscale Conversion
+- Grayscale Inversion
+- Binarization
+  - Thresholding
+  - Random Thresholding
+  - Dithering & Error Diffusion
 
 `combine`
-- `make_watermark(img: torch.Tensor, mark: torch.Tensor, offset=(0, 0))`
 
-- `add`, `subtract`, `multiply`, `divide`
+- Making watermark
+- Float/Logic Arithmetics
+- Clamp
 
 `enhance`
-- `minmax_scale(img: torch.Tensor)`
 
-- `uniform_equalize(img: torch.Tensor, k)`
+- Min-Max Scaling
+- Histogram Equalization
 
 `filters`
-- `uniform_conv(img: torch.Tensor, size, pad)`
 
-- `gaussian_conv(img: torch.Tensor, std, size, pad)`
-
-- `custom_conv(img: torch.Tensor, kernel: torch.Tensor, pad)`
-
-- `median_filter(img: torch.Tensor, size, pad)`
-
-- `pseudo_median_filter(img: torch.Tensor, size, pad)`
-
-- `bilateral_filter(img: torch.Tensor, std_s, std_i, size, pad)`
+- Convolution
+- Blurring
+- Pattern Matching
+- Morphology Operations: ```shrink```, ```thin```, ```skeletonize```, ...
 
 ### Utils
 
