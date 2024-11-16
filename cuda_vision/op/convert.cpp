@@ -32,7 +32,7 @@ void error_diffusion_op(
     torch::Tensor& result,
     const torch::Tensor& image,
     const torch::Tensor& diffuse,
-    float threshold
+    float threshold, bool serpentine
 );
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
@@ -98,12 +98,12 @@ torch::Tensor matrix_dither(const torch::Tensor& image, const torch::Tensor& ind
     return result;
 }
 
-torch::Tensor error_diffusion(const torch::Tensor& image, const torch::Tensor& diffuse, float threshold) {
+torch::Tensor error_diffusion(const torch::Tensor& image, const torch::Tensor& diffuse, float threshold, bool serpentine) {
     CHECK_INPUT(image);
     CHECK_INPUT(diffuse);
 
     torch::Tensor result = torch::empty_like(image);
-    error_diffusion_op(result, image, diffuse, threshold);
+    error_diffusion_op(result, image, diffuse, threshold, serpentine);
 
     return result;
 }

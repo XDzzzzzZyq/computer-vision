@@ -43,10 +43,10 @@ def matrix_dither(img: torch.Tensor, n) -> torch.Tensor:
     return _convert.matrix_dither(img, index)
 
 
-def error_diffusion(img: torch.Tensor, type, thres) -> torch.Tensor:
+def error_diffusion(img: torch.Tensor, type, thres, serpentine=True) -> torch.Tensor:
     from cuda_vision.__kernels import get_diffuse_matrix
     diffuse = get_diffuse_matrix(type).to(img.device).to(img.dtype)
-    return _convert.error_diffusion(img, diffuse, thres)
+    return _convert.error_diffusion(img, diffuse, thres, serpentine)
 
 
 def error_diffusion_fast(img: torch.Tensor, type, thres, step, relaxation=1.0) -> torch.Tensor:
