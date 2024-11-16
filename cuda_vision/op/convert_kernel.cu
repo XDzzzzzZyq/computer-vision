@@ -73,7 +73,7 @@ static __global__ void threshold_kernel(
     int x = blockIdx.x;
     int y = blockIdx.y;
 
-        if(rgb){
+    if(rgb){
         pixel<scalar_t> pixel = get_pixel(image, x, y);
         pixel.r = pixel.r < threshold ? 0.0 : 255.0;
         pixel.g = pixel.g < threshold ? 0.0 : 255.0;
@@ -121,6 +121,40 @@ static __global__ void matrix_dither_kernel(
     scalar_t thrs = (indx+0.5) / (n*n) * 255.0;
     gray = gray > thrs ? 255.0 : 0.0;
     set_value(result, gray, x, y, h, w);
+}
+
+template <typename scalar_t>
+static __global__ void error_diffusion_kernel(
+    scalar_t* result,
+    scalar_t* error,
+    const scalar_t* image,
+    const scalar_t* diffuse,
+    float threshold, int n, int h, int w
+) {
+    int t = threadIdx.x;
+    int off_idx = 1+n*n/2;
+    int off_x = (t+off_idx) % n - 1;
+    int off_y = (t+off_idx) / n - 1;
+
+    for(int y = 0; y < h; y++){
+        for(int x = 0; x < w; x++){
+            scalar_t f = get_value(image, x, y, h, w);
+            scalar_t e = get_value(error, x, y, h, w);
+            scalar_t b = (f+e) < threshold ? 0.0 : 255.0;
+            e += f - b;
+
+            int loc_x = x + off_x;
+            int loc_y = y + off_y;
+            bool out = (loc_x < 0 || loc_x >= w) || (loc_y < 0 || loc_y >= h);
+            if(!out){
+                scalar_t weight = diffuse[t+off_idx];
+                set_value(error, e * weight, loc_x, loc_y, h, w);
+            }
+            __syncthreads();
+            if(t == 0)
+                set_value(result, b, x, y, h, w);
+        }
+    }
 }
 
 // C++ API
@@ -262,6 +296,34 @@ void matrix_dither_op(
             image.data_ptr<scalar_t>(),
             index.data_ptr<scalar_t>(),
             n
+        );
+    });
+}
+
+void error_diffusion_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& diffuse,
+    float threshold
+){
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int h = image.size(2);
+    int w = image.size(3);
+    int n = diffuse.size(0);
+    dim3 grid_size(1, 1, b);
+
+    torch::Tensor error = torch::zeros_like(image);
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "error_diffusion_kernel", [&] {
+        error_diffusion_kernel<scalar_t><<<grid_size, n*n/2, 0, stream>>>(
+            result.data_ptr<scalar_t>(),
+            error.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            diffuse.data_ptr<scalar_t>(),
+            threshold, n, h, w
         );
     });
 }

@@ -28,6 +28,12 @@ void matrix_dither_op(
     const torch::Tensor& image,
     const torch::Tensor& index
 );
+void error_diffusion_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& diffuse,
+    float threshold
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -92,6 +98,16 @@ torch::Tensor matrix_dither(const torch::Tensor& image, const torch::Tensor& ind
     return result;
 }
 
+torch::Tensor error_diffusion(const torch::Tensor& image, const torch::Tensor& diffuse, float threshold) {
+    CHECK_INPUT(image);
+    CHECK_INPUT(diffuse);
+
+    torch::Tensor result = torch::empty_like(image);
+    error_diffusion_op(result, image, diffuse, threshold);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_grayscale", &to_grayscale, "Convert RGB images to grayscales");
     m.def("invert", &invert, "Invert RGB color/grayscale of images");
@@ -99,4 +115,5 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("threshold", &threshold, "Binarize the given images with fixed Threshold");
     m.def("random_threshold", &random_threshold, "Random Binarize the given images by grayscale");
     m.def("matrix_dither", &matrix_dither, "Matrix Dithering with custom Index Matrix");
+    m.def("error_diffusion", &error_diffusion, "Error Diffusion with Given Diffusion Matrix");
 }

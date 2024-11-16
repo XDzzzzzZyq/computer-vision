@@ -23,7 +23,7 @@ def threshold(img: torch, threshold) -> torch.Tensor:
     return _convert.threshold(img, threshold)
 
 
-def random_threshold(img: torch, type, std=127.5, seed=123, step=2) -> torch.Tensor:
+def random_threshold(img: torch, type: str, std=127.5, seed=123, step=2) -> torch.Tensor:
     if type == 'uniform':
         noise = hash(img, step=step, seed=seed)
         noise = (noise - 127.5) * std * (12 ** 0.5) / 255.0 + 127.5
@@ -41,3 +41,9 @@ def matrix_dither(img: torch.Tensor, n) -> torch.Tensor:
     assert img.shape[2] % n == 0 and img.shape[3] % n == 0
     index = get_dither_matrix(n).to(img.device).to(img.dtype)
     return _convert.matrix_dither(img, index)
+
+
+def error_diffusion(img: torch.Tensor, type, threshold) -> torch.Tensor:
+    from cuda_vision.__kernels import get_diffuse_matrix
+    diffuse = get_diffuse_matrix(type).to(img.device).to(img.dtype)
+    return _convert.error_diffusion(img, diffuse, threshold)

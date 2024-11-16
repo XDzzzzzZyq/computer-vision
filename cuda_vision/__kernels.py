@@ -235,3 +235,17 @@ def get_dither_matrix(n):
         index = torch.cat([col1, col2], dim=1)
 
     return index
+
+
+def get_diffuse_matrix(type):
+    if type == 'floyd-steinberg':
+        m = torch.Tensor([[0, 0, 0], [0, 0, 7], [3, 5, 1]])/16
+    elif type == 'jarvis-judice-ninke':
+        m = torch.Tensor([[0, 0, 0, 0, 0],
+                          [0, 0, 0, 0, 0],
+                          [0, 0, 0, 7, 5],
+                          [3, 5, 7, 5, 3],
+                          [1, 3, 5, 3, 1]]) / 48
+    else:
+        m = torch.ones(3, 3)
+    return m
