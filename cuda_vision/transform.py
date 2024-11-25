@@ -12,7 +12,7 @@ class Transform(object):
 
 
 def translate(imgs: torch.Tensor, offset: tuple[float, float]) -> torch.Tensor:
-    return _transform.simple_transform(imgs, offset[0], offset[1], 0)
+    return _transform.simple_transform(imgs, offset[1], offset[0], 0)
 
 
 def rotate(imgs: torch.Tensor, angle: float) -> torch.Tensor:
@@ -22,7 +22,7 @@ def rotate(imgs: torch.Tensor, angle: float) -> torch.Tensor:
 def scale(imgs: torch.Tensor, ratio: tuple[float, float]) -> torch.Tensor:
     if ratio[0] == 0.0 or ratio[1] == 0.0:
         return torch.zeros_like(imgs)
-    return _transform.simple_transform(imgs, ratio[0], ratio[1], 2)
+    return _transform.simple_transform(imgs, ratio[1], ratio[0], 2)
 
 
 def custom_transform(imgs: torch, matrix: torch) -> torch.Tensor:
@@ -44,6 +44,6 @@ if __name__ == "__main__":
     img = load_raw('../imgs/barbara.raw', 256, 256, 1)
     a = translate(img, (64, 0))
     b = rotate(img, 3.1415926/4)
-    c = scale(img, (4, 4))
+    c = scale(img, (4, 0.5))
     compare_imgs([img, a, b, c])
     plt.show()
