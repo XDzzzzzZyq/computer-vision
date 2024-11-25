@@ -100,3 +100,33 @@ static __device__ void set_value(
     int batch_off = blockIdx.z * h * w;
     gray[batch_off + y * h + x] = value;
 }
+
+template <typename scalar_t>
+static __device__ scalar_t sample_value(
+    const scalar_t* gray,
+    float u, float v, int w=0, int h=0
+){
+    w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
+    int batch_off = blockIdx.z * h * w;
+
+    int x0 = int(u*w);
+    int y0 = int(v*h);
+    int x1 = x0+1;
+    int y1 = y0+1;
+
+#define _GET(x, y) (IS_OUT(x, y, w, h) ? 0.0 : gray[batch_off + y * h + x])
+    scalar_t f00 = _GET(x0, y0);
+    scalar_t f10 = _GET(x1, y0);
+    scalar_t f01 = _GET(x0, y1);
+    scalar_t f11 = _GET(x1, y1);
+
+    float fx = u*w-x0;
+    float fy = v*h-y0;
+
+#define LINEAR(a, b, f) (f*b + (1.0-f)*a)
+    scalar_t f0 = LINEAR(f00, f10, fx);
+    scalar_t f1 = LINEAR(f01, f11, fx);
+
+    return LINEAR(f0, f1, fy);
+}
