@@ -45,8 +45,7 @@ static __global__ void zero_crossing_kernel(
         im_y += i-1;
         break;
     }
-    bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
-    array[t] = out ? 0.0 : get_value(lap, im_x, im_y);
+    array[t] = IS_OUT(im_x, im_y, w, h) ? 0.0 : get_value(lap, im_x, im_y);
     __syncthreads();
 
     if(t != 0)

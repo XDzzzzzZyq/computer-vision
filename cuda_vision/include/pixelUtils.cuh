@@ -8,6 +8,9 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#define IS_OUT1D(x, w) (x < 0 || x >= w)
+#define IS_OUT(x, y, w, h) (IS_OUT1D(x, w) || IS_OUT1D(y, h))
+
 template <typename scalar_t>
 struct pixel{
     scalar_t r=0;

@@ -149,8 +149,7 @@ static __global__ void error_diffusion_kernel(
             int loc_y = y + off_y;
             if(serpentine)
                 loc_x = y%2==0?loc_x:w-loc_x-1;
-            bool out = (loc_x < 0 || loc_x >= w) || (loc_y < 0 || loc_y >= h);
-            if(!out){
+            if(!IS_OUT(loc_x, loc_y, w, h)){
                 scalar_t weight = diffuse[t+off_idx];
                 set_value(error, e * weight, loc_x, loc_y, w, h);
             }

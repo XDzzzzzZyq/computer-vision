@@ -53,7 +53,7 @@ static __global__ void semi_conv_gray_kernel(
     int t = threadIdx.x;
     int im_x = x-pad+t;
     int im_y = y+size-pad;
-    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, w, h);
+    scalar_t p = IS_OUT1D(im_x, w) ? 0 : get_value(gray, im_x, im_y, w, h);
 
     float weight = semi_kernel[t];
     buffer[t] = p * weight;
@@ -88,7 +88,7 @@ static __global__ void semi_bilateral_conv_gray_kernel(
     int im_x = x-pad+t;
     int im_y = y+size-pad;
     scalar_t center = get_value(gray, x+e, y+e, h, w);
-    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, w, h);
+    scalar_t p = IS_OUT1D(im_x, w) ? 0 : get_value(gray, im_x, im_y, w, h);
 
     float weight1 = semi_kernel[t];
     float weight2 = gaus(center-p, std);
@@ -149,7 +149,7 @@ static __global__ void full_conv_gray_kernel(
 
     int im_x = x-pad+i;
     int im_y = y-pad+j;
-    scalar_t p = (im_x < 0 || im_x >= w) ? 0 : get_value(gray, im_x, im_y, w, h);
+    scalar_t p = IS_OUT1D(im_x, w) ? 0 : get_value(gray, im_x, im_y, w, h);
 
     float weight = kernel[t];
     buffer[t] = p * weight;
@@ -189,8 +189,7 @@ static __global__ void median_kernel(
     int im_x = x-pad+i;
     int im_y = y-pad+j;
 
-    bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
-    array[t] = out ? 0.0 : get_value(gray, im_x, im_y, w, h);
+    array[t] = IS_OUT(im_x, im_y, w, h) ? 0.0 : get_value(gray, im_x, im_y, w, h);
     __syncthreads();
 
     if(t != 0)
@@ -229,8 +228,7 @@ static __global__ void pattern_match_kernel(
         for(int j = 0; j<3; j++){
             int im_x = x+j-1;
             int im_y = y+i-1;
-            bool out = (im_x < 0 || im_x >= w) || (im_y < 0 || im_y >= h);
-            storage[i*3+j] = out ? (conditional ? 255.0 : 0.0) : get_value(image, im_x, im_y);
+            storage[i*3+j] = IS_OUT(im_x, im_y, w, h) ? (conditional ? 255.0 : 0.0) : get_value(image, im_x, im_y);
         }
     }
 
