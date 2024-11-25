@@ -116,11 +116,11 @@ static __global__ void matrix_dither_kernel(
     int x = blockIdx.x * n + bx;
     int y = blockIdx.y * n + by;
 
-    scalar_t gray = get_value(image, x, y, h, w);
+    scalar_t gray = get_value(image, x, y, w, h);
     scalar_t indx = index[by * n + bx];
     scalar_t thrs = (indx+0.5) / (n*n) * 255.0;
     gray = gray > thrs ? 255.0 : 0.0;
-    set_value(result, gray, x, y, h, w);
+    set_value(result, gray, x, y, w, h);
 }
 
 template <typename scalar_t>
@@ -140,8 +140,8 @@ static __global__ void error_diffusion_kernel(
     for(int y = 0; y < h; y++){
         for(int x = 0; x < w; x++){
             int inv_x = serpentine ? y%2==0?x:w-x-1 : x;
-            scalar_t f = get_value(image, inv_x, y, h, w);
-            scalar_t e = get_value(error, inv_x, y, h, w);
+            scalar_t f = get_value(image, inv_x, y, w, h);
+            scalar_t e = get_value(error, inv_x, y, w, h);
             scalar_t b = (f+e) < threshold ? 0.0 : 255.0;
             e += f - b;
 
@@ -152,11 +152,11 @@ static __global__ void error_diffusion_kernel(
             bool out = (loc_x < 0 || loc_x >= w) || (loc_y < 0 || loc_y >= h);
             if(!out){
                 scalar_t weight = diffuse[t+off_idx];
-                set_value(error, e * weight, loc_x, loc_y, h, w);
+                set_value(error, e * weight, loc_x, loc_y, w, h);
             }
             __syncthreads();
             if(t == 0)
-                set_value(result, b, inv_x, y, h, w);
+                set_value(result, b, inv_x, y, w, h);
         }
     }
 }

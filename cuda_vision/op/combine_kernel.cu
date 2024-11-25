@@ -84,7 +84,7 @@ static __global__ void watermark_gray_kernel(
     scalar_t grayscale_mk = get_value(mark, x, y);
 
     if(grayscale_mk < 245.0)
-        set_value(result, grayscale_mk, x+offset_x, y+offset_y, img_h, img_w);
+        set_value(result, grayscale_mk, x+offset_x, y+offset_y, img_w, img_h);
 }
 
 template <typename scalar_t>

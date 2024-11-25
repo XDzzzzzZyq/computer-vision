@@ -46,10 +46,10 @@ struct pixel{
 template <typename scalar_t>
 static __device__ pixel<scalar_t> get_pixel(
     const scalar_t* image,
-    int x, int y, int h=0, int w=0
+    int x, int y, int w=0, int h=0
 ){
-    h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
     int chane_off = h * w;
     int batch_off = blockIdx.z * chane_off * 3;
     int loc = y * h + x;
@@ -63,10 +63,10 @@ template <typename scalar_t>
 static __device__ void set_pixel(
     scalar_t* image,
     pixel<scalar_t> pixel,
-    int x, int y, int h=0, int w=0
+    int x, int y, int w=0, int h=0
 ){
-    h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
     int chane_off = h * w;
     int batch_off = blockIdx.z * chane_off * 3;
     int loc = y * h + x;
@@ -78,10 +78,10 @@ static __device__ void set_pixel(
 template <typename scalar_t>
 static __device__ scalar_t get_value(
     const scalar_t* gray,
-    int x, int y, int h=0, int w=0
+    int x, int y, int w=0, int h=0
 ){
-    h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
     int batch_off = blockIdx.z * h * w;
     return gray[batch_off + y * h + x];
 }
@@ -90,10 +90,10 @@ template <typename scalar_t>
 static __device__ void set_value(
     scalar_t* gray,
     scalar_t value,
-    int x, int y, int h=0, int w=0
+    int x, int y, int w=0, int h=0
 ){
-    h = h == 0 ? gridDim.x : h;
     w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
     int batch_off = blockIdx.z * h * w;
     gray[batch_off + y * h + x] = value;
 }
