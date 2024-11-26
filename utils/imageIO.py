@@ -25,6 +25,7 @@ def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
 def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
     if image.ndim == 4:
         image = image[0]
+    range = range if range is not None else (None, None)
     ax.imshow(image.transpose(0, 2).detach().cpu().int(), cmap='gray', vmin=range[0], vmax=range[1],
               interpolation=interpolation)
 
