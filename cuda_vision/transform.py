@@ -1,4 +1,5 @@
 import torch
+from typing import overload
 from cuda_vision.__compile import load_src
 
 _transform = load_src("transform")
@@ -8,7 +9,7 @@ class Transform(object):
     def __init__(self, offset=(0.0,0.0), angle=0.0, ratio=(1.0,1.0)):
         self.offset = offset
         self.angle = angle
-        self.ratio = ratio
+        self.ratio = ratio if isinstance(ratio, tuple) else (ratio, ratio)
 
 
 def translate(imgs: torch.Tensor, offset: tuple[float, float]) -> torch.Tensor:
@@ -19,31 +20,49 @@ def rotate(imgs: torch.Tensor, angle: float) -> torch.Tensor:
     return _transform.simple_transform(imgs, angle, 0.0, 1)
 
 
-def scale(imgs: torch.Tensor, ratio: tuple[float, float]) -> torch.Tensor:
-    if ratio[0] == 0.0 or ratio[1] == 0.0:
-        return torch.zeros_like(imgs)
-    return _transform.simple_transform(imgs, ratio[1], ratio[0], 2)
+def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float) -> torch.Tensor:
+    if isinstance(ratio, tuple):
+        if ratio[0] == 0.0 or ratio[1] == 0.0:
+            return torch.zeros_like(imgs)
+        return _transform.simple_transform(imgs, ratio[1], ratio[0], 2)
+    elif isinstance(ratio, float):
+        if ratio == 0.0:
+            return torch.zeros_like(imgs)
+        return _transform.simple_transform(imgs, ratio, ratio, 2)
+    return imgs
 
 
-def custom_transform(imgs: torch, matrix: torch) -> torch.Tensor:
-    assert matrix.ndim == 2
-    assert matrix.shape[0] == matrix.shape[1] == 3  # using homogeneous coordinate
-    return _transform.custom_transform(imgs, matrix)
+def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform) -> torch.Tensor:
 
+    if isinstance(trans, Transform):
+        import math
+        offset = trans.offset
+        angle = trans.angle
+        ratio = trans.ratio
+        matrx = torch.tensor([[ratio[0] * math.cos(angle),-ratio[1] * math.sin(angle), offset[0]],
+                              [ratio[0] * math.sin(angle), ratio[1] * math.cos(angle), offset[1]],
+                              [0.0, 0.0, 1.0]]).to(imgs.device).float()
+        return custom_transform(imgs, matrx)
+    elif isinstance(trans, torch.Tensor):
+        assert trans.ndim == 2
+        assert trans.shape[0] == trans.shape[1] == 3  # using homogeneous coordinate
+        return _transform.custom_transform(imgs, trans)
 
-def apply_transform(imgs: torch.Tensor, trans: Transform) -> torch.Tensor:
-    imgs = scale(imgs, trans.ratio)
-    imgs = rotate(imgs, trans.angle)
-    imgs = translate(imgs, trans.offset)
     return imgs
 
 
 if __name__ == "__main__":
     from utils.imageIO import *
+    import math
 
     img = load_raw('../imgs/barbara.raw', 256, 256, 1)
-    a = translate(img, (64, 0))
-    b = rotate(img, 3.1415926/4)
-    c = scale(img, (4, 0.5))
-    compare_imgs([img, a, b, c])
+    imgs = []
+    for t in range(21):
+        offset = math.sqrt(2) * t
+        angle = 5 * t / 360 * (2 * math.pi)
+        ratio = 0.97 ** t
+        trans = Transform(offset=(offset, offset), angle=angle, ratio=ratio)
+        imgs.append(custom_transform(img, trans))
+
+    compare_imgs([imgs[0], imgs[5], imgs[20]])
     plt.show()
