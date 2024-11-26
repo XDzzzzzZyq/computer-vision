@@ -1,3 +1,4 @@
+import matplotlib.pyplot as plt
 import torch
 from typing import overload
 from cuda_vision.__compile import load_src
@@ -51,18 +52,17 @@ def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform) -> to
     return imgs
 
 
+def disk_warp(img: torch.Tensor, inverse=False) -> torch.Tensor:
+    return _transform.disk_warp(img, inverse)
+
+
 if __name__ == "__main__":
     from utils.imageIO import *
     import math
 
-    img = load_raw('../imgs/barbara.raw', 256, 256, 1)
-    imgs = []
-    for t in range(21):
-        offset = math.sqrt(2) * t
-        angle = 5 * t / 360 * (2 * math.pi)
-        ratio = 0.97 ** t
-        trans = Transform(offset=(offset, offset), angle=angle, ratio=ratio)
-        imgs.append(custom_transform(img, trans))
+    img = load_raw('../imgs/baboon.raw', 512, 512, 1)
+    w = disk_warp(img)
+    r = disk_warp(w, inverse=True)
 
-    compare_imgs([imgs[0], imgs[5], imgs[20]])
+    compare_imgs([img, w, r])
     plt.show()

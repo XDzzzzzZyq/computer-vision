@@ -110,8 +110,8 @@ static __device__ scalar_t sample_value(
     h = h == 0 ? gridDim.x : h;
     int batch_off = blockIdx.z * h * w;
 
-    int x0 = int(u*w);
-    int y0 = int(v*h);
+    int x0 = int(u*w-0.5);
+    int y0 = int(v*h-0.5);
     int x1 = x0+1;
     int y1 = y0+1;
 
@@ -121,8 +121,8 @@ static __device__ scalar_t sample_value(
     scalar_t f01 = _GET(x0, y1);
     scalar_t f11 = _GET(x1, y1);
 
-    float fx = u*w-x0;
-    float fy = v*h-y0;
+    float fx = u*w-0.5-x0;
+    float fy = v*h-0.5-y0;
 
 #define LINEAR(a, b, f) (f*b + (1.0-f)*a)
     scalar_t f0 = LINEAR(f00, f10, fx);
