@@ -23,8 +23,8 @@ static __global__ void simple_transform_kernel(
     int h = gridDim.x;
     int w = gridDim.y;
 
-    float u = (float(x)+0.5)/float(w) - 0.5;
-    float v = (float(y)+0.5)/float(h) - 0.5;
+    float u = (float(x)+0.5)/float(w);
+    float v = (float(y)+0.5)/float(h);
     float _u, _v;
 
     switch(mode){
