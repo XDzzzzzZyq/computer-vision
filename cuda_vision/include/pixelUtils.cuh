@@ -102,6 +102,32 @@ static __device__ void set_value(
 }
 
 template <typename scalar_t>
+static __device__ scalar_t get_value_channel(
+    const scalar_t* gray,
+    int x, int y, int c, int num_ch, int w=0, int h=0
+){
+    w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
+
+    int channel_off = h * w;
+    int batch_off = channel_off * num_ch * blockIdx.z;
+    return gray[batch_off + c * channel_off + y * h + x];
+}
+
+template <typename scalar_t>
+static __device__ void set_value_channel(
+    scalar_t* gray,
+    scalar_t value,
+    int x, int y, int c, int num_ch, int w=0, int h=0
+){
+    w = w == 0 ? gridDim.y : w;
+    h = h == 0 ? gridDim.x : h;
+    int channel_off = h * w;
+    int batch_off = channel_off * num_ch * blockIdx.z;
+    gray[batch_off + c * channel_off + y * h + x] = value;
+}
+
+template <typename scalar_t>
 static __device__ scalar_t sample_value(
     const scalar_t* gray,
     float u, float v, int w=0, int h=0

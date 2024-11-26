@@ -87,7 +87,7 @@ static __global__ void semi_bilateral_conv_gray_kernel(
     int t = threadIdx.x;
     int im_x = x-pad+t;
     int im_y = y+size-pad;
-    scalar_t center = get_value(gray, x+e, y+e, h, w);
+    scalar_t center = get_value(gray, x+e, y+e, w, h);
     scalar_t p = IS_OUT1D(im_x, w) ? 0 : get_value(gray, im_x, im_y, w, h);
 
     float weight1 = semi_kernel[t];
