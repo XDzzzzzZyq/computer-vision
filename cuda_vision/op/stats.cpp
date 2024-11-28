@@ -10,6 +10,11 @@ void get_momentum_op(
     const torch::Tensor& sat,
     int window
 );
+void get_minmaxmedian_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int window
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -37,7 +42,20 @@ torch::Tensor get_momentum(const torch::Tensor& sat, int window) {
     return result;
 }
 
+torch::Tensor get_minmaxmedian(const torch::Tensor& image, int window) {
+    CHECK_INPUT(image);
+
+    int B = image.size(0);
+    int H = image.size(2);
+    int W = image.size(3);
+    torch::Tensor result = torch::empty({B, 3, H/window, W/window}).to(image.device());
+    get_minmaxmedian_op(result, image, window);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_sat", &to_sat, "Construct the Summed Area Table (SAT)");
     m.def("get_momentum", &get_momentum, "Estimate the centralized momentum up to k-order");
+    m.def("get_minmaxmedian", &get_minmaxmedian, "Calculate the Min, Max, and Medium");
 }

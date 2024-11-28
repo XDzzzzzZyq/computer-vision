@@ -10,6 +10,7 @@
 #include <cuda_runtime.h>
 
 #include "pixelUtils.cuh"
+#include "arrayUtils.cuh"
 
 template <typename scalar_t>
 static __global__ void fill_momentum_kernel(
@@ -114,6 +115,46 @@ static __global__ void estimate_momentum_kernel(
     set_value_channel(result, momentum, x, y, o, c);
 }
 
+template <typename scalar_t>
+static __global__ void minmaxmedian_kernel(
+    scalar_t* result,
+    const scalar_t* gray,
+    int window, int w, int h
+) {
+    extern __shared__ char __shared_buffer[];
+    scalar_t* array = reinterpret_cast<scalar_t*>(__shared_buffer);
+
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int n = window * window;
+
+    int t = threadIdx.x;
+    int im_x = x*window+t%window;
+    int im_y = y*window+t/window;
+
+    array[t] = get_value(gray, im_x, im_y, w, h);
+    __syncthreads();
+
+    if(t == 0)
+        arr::quicksort(array, 0, n-1);
+    __syncthreads();
+
+    switch(t){
+    case 0:
+        set_value_channel(result, array[0], x, y, t, 3);
+        break;
+    case 1:
+        set_value_channel(result, array[n-1], x, y, t, 3);
+        break;
+    case 2:
+        if (n%2 == 0)
+            set_value_channel(result, (array[n/2-1]+array[n/2])/2, x, y, t, 3);
+        else
+            set_value_channel(result, array[n/2], x, y, t, 3);
+        break;
+    }
+}
+
 // C++ API
 
 void to_sat_op(
@@ -173,6 +214,30 @@ void get_momentum_op(
         estimate_momentum_kernel<scalar_t><<<grid_size0, o, o*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
             sat.data_ptr<scalar_t>(),
+            window, w, h
+        );
+    });
+}
+
+void get_minmaxmedian_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    int window
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = result.size(0);
+    int h = image.size(2);
+    int w = image.size(3);
+    int n = window * window;
+    dim3 grid_size0(h/window, w/window, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "minmaxmedian_kernel", [&] {
+        minmaxmedian_kernel<scalar_t><<<grid_size0, n, n*sizeof(scalar_t), stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
             window, w, h
         );
     });
