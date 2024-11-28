@@ -18,7 +18,7 @@ static __global__ void minmax_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int b = threadIdx.x;
+    int b = blockIdx.z;
 
     scalar_t gray = get_value(image, x, y);
     atomicMin(&batched_min[b], int(gray));
@@ -32,7 +32,7 @@ static __global__ void histo_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int b = threadIdx.x;
+    int b = blockIdx.z;
 
     scalar_t gray = get_value(image, x, y);
     atomicAdd(&table[b*256 + int(gray)], 1);
@@ -46,7 +46,7 @@ static __global__ void minmax_scale_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int b = threadIdx.x;
+    int b = blockIdx.z;
 
     scalar_t gray = get_value(image, x, y);
     scalar_t scaled = (gray - batched_min[b])/(batched_max[b] - batched_min[b]) * 255.;
@@ -58,7 +58,7 @@ static __global__ void mapping_kernel(
     const int* table,
     int w, int h, int k
 ) {
-    int b = threadIdx.x;
+    int b = blockIdx.z;
     int num = w*h/k; // num per bin
 
     int count = 0;
