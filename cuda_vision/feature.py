@@ -54,8 +54,7 @@ if __name__ == "__main__":
     from utils.imageIO import *
 
     tex = load_raw('../imgs/comb1.raw', 256, 256, 1)
-    a = get_laws_features(tex, 8)
-    compare_imgs([a[:, 0:1], a[:, 1:2], a[:, 2:3]], range=None)
-    compare_imgs([a[:, 3:4], a[:, 4:5], a[:, 5:6]], range=None)
-    compare_imgs([a[:, 6:7], a[:, 7:8], a[:, 8:9]], range=None)
+    a = get_full_features(tex, 8, normalize=True)
+    list = [a[:, t:t+1] for t in range(a.shape[1])]
+    compare_imgs_grid(list, shape=(4, 4))
     plt.show()
