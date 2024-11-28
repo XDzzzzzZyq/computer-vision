@@ -249,3 +249,14 @@ def get_diffuse_matrix(type):
     else:
         m = torch.ones(3, 3)
     return m
+lwa
+
+L3laws = torch.tensor([1,  2, 1])/6
+E3laws = torch.tensor([-1, 0, 1])/2
+S3laws = torch.tensor([1, -2, 1])/2
+
+
+def get_laws_kernel():
+    v = torch.stack([L3laws, E3laws, S3laws], dim=0)
+    outer = torch.einsum('ik,jl->ijkl', v, v)
+    return outer.reshape(9, 3, 3)

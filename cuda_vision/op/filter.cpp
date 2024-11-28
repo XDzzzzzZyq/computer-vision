@@ -23,7 +23,12 @@ void bilateral_filter_op(
 void custom_conv_op(
     torch::Tensor& result,
     const torch::Tensor& image,
-    const torch::Tensor& kernel,int pad
+    const torch::Tensor& kernel, int pad
+);
+void custom_multi_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& kernels, int pad
 );
 void pattern_match_op(
     torch::Tensor& mark,
@@ -36,9 +41,9 @@ void pattern_match_op(
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
-torch::Tensor get_conv_empty(const torch::Tensor& image, int size, int pad) {
+torch::Tensor get_conv_empty(const torch::Tensor& image, int size, int pad, int channel_mul=1) {
     int b = image.size(0);
-    int c = image.size(1);
+    int c = image.size(1) * channel_mul;
     int h = image.size(2);
     int w = image.size(3);
     int e = pad - size;
@@ -88,6 +93,17 @@ torch::Tensor custom_conv(const torch::Tensor& image, const torch::Tensor& kerne
 
     return result;
 }
+torch::Tensor custom_multi_conv(const torch::Tensor& image, const torch::Tensor& kernels, int pad) {
+    CHECK_INPUT(image);
+    CHECK_INPUT(kernels);
+
+    int n = kernels.size(0);
+    int size = kernels.size(1) / 2;
+    torch::Tensor result = get_conv_empty(image, size, pad, n);
+    custom_multi_conv_op(result, image, kernels.to(torch::kFloat), pad);
+
+    return result;
+}
 torch::Tensor pattern_match(const torch::Tensor& image, const torch::Tensor& patterns, bool cond) {
     CHECK_INPUT(image);
     CHECK_INPUT(patterns);
@@ -104,5 +120,6 @@ PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("median_filter", &median_filter, "Median/Pseudo-Median Filter");
     m.def("bilateral_filter", &bilateral_filter, "Bilateral Filter");
     m.def("custom_conv", &custom_conv, "Convolution with Custom Kernel");
+    m.def("custom_multi_conv", &custom_multi_conv, "Convolution with Custom Kernel Sequence");
     m.def("pattern_match", &pattern_match, "Match the Pattern");
 }

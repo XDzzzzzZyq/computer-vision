@@ -17,6 +17,11 @@ def custom_conv(img: torch.Tensor, kernel: torch.Tensor, pad) -> torch.Tensor:
     return _filter.custom_conv(img, kernel, pad)
 
 
+def custom_multi_conv(img: torch.Tensor, kernels: torch.Tensor, pad) -> torch.Tensor:
+    assert kernels.ndim == 3
+    return _filter.custom_multi_conv(img, kernels, pad)
+
+
 def median_filter(img: torch.Tensor, size, pad) -> torch.Tensor:
     return _filter.median_filter(img, size, pad, False)
 

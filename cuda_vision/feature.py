@@ -23,16 +23,24 @@ def get_minmaxmedian_features(imgs: torch.Tensor, window=4) -> torch.Tensor:
 
 
 def get_laws_features(imgs: torch.Tensor, window=4) -> torch.Tensor:
-    pass
+    from cuda_vision.__kernels import get_laws_kernel
+    from cuda_vision.filters import custom_multi_conv
+    assert window > 1
+    kernels = get_laws_kernel().to(imgs.device)
+    B, _, H, W = imgs.shape
+    features = custom_multi_conv(imgs, kernels, 1) # B, 9, H, W
+    features = features.reshape(B*9, 1, H, W)
+    features = get_momentum_features(features, 2, window) # B*9, 2, H//window, W//window
+    return features.reshape(B, 9, 2, H//window, W//window)[:, :, 1]
 
 
 def get_full_features(imgs: torch.Tensor, window=4, normalize=True, sat=None) -> torch.Tensor:
     momentum_features = get_momentum_features(imgs, window=window, order=4, sat=sat)
-    minmax_features = get_minmaxmedian_features(imgs, window=window)
+    minmaxmedian_features = get_minmaxmedian_features(imgs, window=window)
     laws_features = get_laws_features(imgs, window=window)
-    features = torch.cat([momentum_features, minmax_features, laws_features], dim=1)
+    features = torch.cat([momentum_features, minmaxmedian_features, laws_features], dim=1)
     assert features.ndim == 4
-    assert features.shape[1] == 4 + 2 + 9*2
+    assert features.shape[1] == 4 + 3 + 9
     if normalize:
         from cuda_vision.enhance import minmax_scale
         B, F, H, W = features.shape
@@ -46,6 +54,8 @@ if __name__ == "__main__":
     from utils.imageIO import *
 
     tex = load_raw('../imgs/comb1.raw', 256, 256, 1)
-    a = get_minmaxmedian_features(tex, 8)
-    compare_imgs([tex, a[:,0:1], a[:,1:2], a[:,2:3]])
+    a = get_laws_features(tex, 8)
+    compare_imgs([a[:, 0:1], a[:, 1:2], a[:, 2:3]], range=None)
+    compare_imgs([a[:, 3:4], a[:, 4:5], a[:, 5:6]], range=None)
+    compare_imgs([a[:, 6:7], a[:, 7:8], a[:, 8:9]], range=None)
     plt.show()

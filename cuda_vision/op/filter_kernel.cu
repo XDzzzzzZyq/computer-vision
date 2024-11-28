@@ -137,19 +137,17 @@ static __global__ void full_conv_gray_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
+    int h = gridDim.x - 2 * (pad - size);
     int w = gridDim.y - 2 * (pad - size);
     int n = size*2+1;
     extern __shared__ char __shared_buffer[];
     scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
 
     int t = threadIdx.x;
-    int i = t / n;
-    int j = t - i * n;
 
-    int im_x = x-pad+i;
-    int im_y = y-pad+j;
-    scalar_t p = IS_OUT1D(im_x, w) ? 0 : get_value(gray, im_x, im_y, w, h);
+    int im_x = x-pad+t % n;
+    int im_y = y-pad+t / n;
+    scalar_t p = IS_OUT(im_x, im_y, w, h) ? 0 : get_value(gray, im_x, im_y, w, h);
 
     float weight = kernel[t];
     buffer[t] = p * weight;
@@ -159,10 +157,48 @@ static __global__ void full_conv_gray_kernel(
         return;
 
     scalar_t r = 0.0;
-    for(int i = 0; i<(2*size+1)*(2*size+1); i++){
+    for(int i = 0; i<n*n; i++){
         r += buffer[i];
     }
     set_value(result, r, x, y);
+}
+
+template <typename scalar_t>
+static __global__ void full_multi_conv_gray_kernel(
+    scalar_t* result,
+    const scalar_t* gray,
+    const float* kernels,
+    int size, int pad
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int h = gridDim.x - 2 * (pad - size);
+    int w = gridDim.y - 2 * (pad - size);
+    int n = size*2+1;
+    int k = blockDim.x;  // kernel num
+
+    extern __shared__ char __shared_buffer[];
+    scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
+
+    int j = threadIdx.x; // current kernel
+    int t = threadIdx.y;
+
+    int im_x = x-pad+t % n;
+    int im_y = y-pad+t / n;
+    scalar_t p = IS_OUT(im_x, im_y, w, h) ? 0 : get_value(gray, im_x, im_y, w, h);
+
+    float weight = kernels[j*n*n + t];
+    buffer[j*n*n + t] = p * weight;
+    __syncthreads();
+
+    if(t != 0)
+        return;
+
+    scalar_t r = 0.0;
+    for(int i = 0; i<n*n; i++){
+        r += buffer[j*n*n + i];
+    }
+    set_value_channel(result, r, x, y, j, k);
 }
 
 template <typename scalar_t>
@@ -405,6 +441,36 @@ void custom_conv_op(
         full_conv_op(result, image, kernel.data_ptr<float>(), size, pad);
         break;
     }
+}
+
+void custom_multi_conv_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& kernels, int pad
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int size = kernels.size(1) / 2;
+    int b = image.size(0);
+    int c = image.size(1);
+    int h = image.size(2);
+    int w = image.size(3);
+    int l = (2*size+1)*(2*size+1);
+    int k = kernels.size(0);
+    int e = pad - size;
+    dim3 grid_size(h+2*e, w+2*e, b);
+    dim3 block_size(k, l, 1);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "full_multi_conv_gray_kernel", [&] {
+        full_multi_conv_gray_kernel<scalar_t><<<grid_size, block_size, k*l*sizeof(scalar_t), stream>>>(
+            result.data_ptr<scalar_t>(),
+            image.data_ptr<scalar_t>(),
+            kernels.data_ptr<float>(),
+            size, pad
+        );
+    });
 }
 
 void median_filter_op(
