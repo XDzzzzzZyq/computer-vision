@@ -37,6 +37,14 @@ def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest'):
         show_img(images[i], range=range, interpolation=interpolation, ax=ax)
 
 
+def compare_imgs_grid(images: list, shape, range=(0.0, 255.0), interpolation='nearest'):
+    assert shape[0]*shape[1] == len(images)
+    fig, axe = plt.subplots(nrows=shape[0], ncols=shape[1], figsize=(10 * shape[0], 10 * shape[1]))
+    for i, axr in enumerate(axe):
+        for j, ax in enumerate(axr):
+            show_img(images[i*shape[1]+j], range=range, interpolation=interpolation, ax=ax)
+
+
 def show_hist(image, bins=256, range=(0, 255), ax=plt):
     if image.ndim == 4:
         image = image[0]
