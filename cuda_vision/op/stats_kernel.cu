@@ -64,6 +64,56 @@ static __global__ void semi_sat_kernel(
 	set_value_channel(result, buffer[x1], y, x1, o, c, h, w);
 }
 
+template <typename scalar_t>
+static __global__ void estimate_momentum_kernel(
+    scalar_t* result,
+    const scalar_t* sat,
+    int window, int sat_w, int sat_h
+) {
+    extern __shared__ char __shared_buffer[];
+    scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
+
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int o = threadIdx.x;
+    int c = blockDim.x;
+    int n = window * window;
+
+    int x0 = -1+x*window;
+    int x1 = -1+(x+1)*window;
+    int y0 = -1+y*window;
+    int y1 = -1+(y+1)*window;
+
+#define _GET_SAT(_x, _y) IS_OUT(_x, _y, sat_w, sat_h) ? 0.0 : get_value_channel(sat, _x, _y, o, c, sat_w, sat_h)
+
+    scalar_t top_left = _GET_SAT(x0, y0);
+    scalar_t top_right= _GET_SAT(x1, y0);
+    scalar_t dwn_left = _GET_SAT(x0, y1);
+    scalar_t dwn_right= _GET_SAT(x1, y1);
+
+    buffer[o] = (dwn_right - dwn_left - top_right + top_left)/scalar_t(n);
+    __syncthreads();
+
+    scalar_t momentum = 0.0;
+    switch(o+1){
+    case 1: // E[X]
+        momentum = buffer[o];
+        break;
+    case 2: // V[X] = E[X^2] - E[X]^2
+        momentum = buffer[o] - buffer[o-1]*buffer[o-1];
+        break;
+    case 3:
+        momentum = buffer[o] - 3*buffer[o-2]*buffer[o-1] + 2*pow(buffer[o-2], scalar_t(3.0));
+        momentum/= pow(buffer[o-1]-buffer[o-2]*buffer[o-2], scalar_t(1.5));
+        break;
+    default:
+        momentum = buffer[o];
+        break;
+    }
+
+    set_value_channel(result, momentum, x, y, o, c);
+}
+
 // C++ API
 
 void to_sat_op(
@@ -100,6 +150,30 @@ void to_sat_op(
         semi_sat_kernel<scalar_t><<<grid_size1, w/2, w*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
             temp2.data_ptr<scalar_t>()
+        );
+    });
+}
+
+void get_momentum_op(
+    torch::Tensor& result,
+    const torch::Tensor& sat,
+    int window
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = result.size(0);
+    int o = result.size(1);
+    int h = sat.size(2);
+    int w = sat.size(3);
+    dim3 grid_size0(h/window, w/window, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(sat.scalar_type(), "estimate_momentum_kernel", [&] {
+        estimate_momentum_kernel<scalar_t><<<grid_size0, o, o*sizeof(scalar_t), stream>>>(
+            result.data_ptr<scalar_t>(),
+            sat.data_ptr<scalar_t>(),
+            window, w, h
         );
     });
 }

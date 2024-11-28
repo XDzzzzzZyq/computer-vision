@@ -5,6 +5,11 @@ void to_sat_op(
     torch::Tensor& result,
     const torch::Tensor& image
 );
+void get_momentum_op(
+    torch::Tensor& result,
+    const torch::Tensor& sat,
+    int window
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -19,6 +24,20 @@ torch::Tensor to_sat(const torch::Tensor& image, int order) {
     return result;
 }
 
+torch::Tensor get_momentum(const torch::Tensor& sat, int window) {
+    CHECK_INPUT(sat);
+
+    int B = sat.size(0);
+    int O = sat.size(1);
+    int H = sat.size(2);
+    int W = sat.size(3);
+    torch::Tensor result = torch::empty({B, O, H/window, W/window}).to(sat.device());
+    get_momentum_op(result, sat, window);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_sat", &to_sat, "Construct the Summed Area Table (SAT)");
+    m.def("get_momentum", &get_momentum, "Estimate the centralized momentum up to k-order");
 }
