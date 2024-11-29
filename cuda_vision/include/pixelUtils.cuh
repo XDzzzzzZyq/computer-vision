@@ -7,6 +7,7 @@
 
 #include <cuda.h>
 #include <cuda_runtime.h>
+#include <cmath>
 
 #define IS_OUT1D(x, w) (x < 0 || x >= w)
 #define IS_OUT(x, y, w, h) (IS_OUT1D(x, w) || IS_OUT1D(y, h))
@@ -136,8 +137,8 @@ static __device__ scalar_t sample_value(
     h = h == 0 ? gridDim.x : h;
     int batch_off = blockIdx.z * h * w;
 
-    int x0 = int(u*w-0.5);
-    int y0 = int(v*h-0.5);
+    int x0 = std::floor(u*w-0.5);
+    int y0 = std::floor(v*h-0.5);
     int x1 = x0+1;
     int y1 = y0+1;
 
@@ -153,6 +154,5 @@ static __device__ scalar_t sample_value(
 #define LINEAR(a, b, f) (f*b + (1.0-f)*a)
     scalar_t f0 = LINEAR(f00, f10, fx);
     scalar_t f1 = LINEAR(f01, f11, fx);
-
     return LINEAR(f0, f1, fy);
 }
