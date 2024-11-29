@@ -15,12 +15,12 @@ class Transform(object):
 
 def translate(imgs: torch.Tensor, offset: tuple[float, float], shape=None) -> torch.Tensor:
     shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
-    return _transform.simple_transform(imgs, offset[1], offset[0], 0, shape[0], shape[1])
+    return _transform.simple_transform(imgs, offset, shape, 0)
 
 
 def rotate(imgs: torch.Tensor, angle: float, shape=None) -> torch.Tensor:
     shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
-    return _transform.simple_transform(imgs, angle, 0.0, 1, shape[0], shape[1])
+    return _transform.simple_transform(imgs, (0.0, angle), shape, 1)
 
 
 def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float, shape=None) -> torch.Tensor:
@@ -28,12 +28,11 @@ def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float, shape=None) -
     if isinstance(ratio, tuple):
         if ratio[0] == 0.0 or ratio[1] == 0.0:
             return torch.zeros_like(imgs)
-        return _transform.simple_transform(imgs, ratio[1], ratio[0], 2, shape[0], shape[1])
     elif isinstance(ratio, float):
         if ratio == 0.0:
             return torch.zeros_like(imgs)
-        return _transform.simple_transform(imgs, ratio, ratio, 2)
-    return imgs
+        ratio = (ratio, ratio)
+    return _transform.simple_transform(imgs, ratio, shape, 2)
 
 
 def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
@@ -63,8 +62,8 @@ def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
     return segments
 
 
-def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform) -> torch.Tensor:
-
+def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform, shape=None) -> torch.Tensor:
+    shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
     if isinstance(trans, Transform):
         import math
         offset = trans.offset
@@ -77,7 +76,7 @@ def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform) -> to
     elif isinstance(trans, torch.Tensor):
         assert trans.ndim == 2
         assert trans.shape[0] == trans.shape[1] == 3  # using homogeneous coordinate
-        return _transform.custom_transform(imgs, trans)
+        return _transform.custom_transform(imgs, trans, shape)
 
     return imgs
 

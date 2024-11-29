@@ -1,5 +1,6 @@
 #include <torch/extension.h>
 #include <iostream>
+#include <tuple>
 
 void simple_transform_op(
     torch::Tensor& result,
@@ -22,22 +23,26 @@ void disk_warp_op(
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
-torch::Tensor simple_transform(const torch::Tensor& image, float arg1, float arg2, int mode, int w_new, int h_new) {
+torch::Tensor simple_transform(const torch::Tensor& image, std::tuple<float, float> args, std::tuple<int, int> shape, int mode) {
     CHECK_INPUT(image);
 
     int B = image.size(0);
-    torch::Tensor result = torch::empty({B, 1, h_new, w_new}).to(image.device());
-    simple_transform_op(result, image, arg1, arg2, mode);
+    int H = std::get<1>(shape);
+    int W = std::get<0>(shape);
+    torch::Tensor result = torch::empty({B, 1, H, W}).to(image.device());
+    simple_transform_op(result, image, std::get<1>(args), std::get<0>(args), mode);
 
     return result;
 }
 
-torch::Tensor custom_transform(const torch::Tensor& image, const torch::Tensor& matrix, int w_new, int h_new) {
+torch::Tensor custom_transform(const torch::Tensor& image, const torch::Tensor& matrix, std::tuple<int, int> shape) {
     CHECK_INPUT(image);
     CHECK_INPUT(matrix);
 
     int B = image.size(0);
-    torch::Tensor result = torch::empty({B, 1, h_new, w_new}).to(image.device());
+    int H = std::get<1>(shape);
+    int W = std::get<0>(shape);
+    torch::Tensor result = torch::empty({B, 1, H, W}).to(image.device());
     custom_transform_op(result, image, matrix);
 
     return result;
