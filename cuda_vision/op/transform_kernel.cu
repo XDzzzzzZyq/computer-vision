@@ -24,8 +24,8 @@ static __global__ void simple_transform_kernel(
     int h = gridDim.x;
     int w = gridDim.y;
 
-    float u = (float(x)+0.5)/float(w);
-    float v = (float(y)+0.5)/float(h);
+    float u = (float(x)+0.5)/float(w) - 0.5;
+    float v = (float(y)+0.5)/float(h) - 0.5;
     float _u, _v;
 
     switch(mode){
@@ -34,21 +34,23 @@ static __global__ void simple_transform_kernel(
         v -= arg2/float(h_old);
         break;
     case 1:
-        u -= 0.5;
-        v -= 0.5;
         _u = u*cos(arg1) - v*sin(arg1);
         _v = u*sin(arg1) + v*cos(arg1);
-        u = _u + 0.5;
-        v = _v + 0.5;
+        u = _u;
+        v = _v;
         break;
     case 2:
-        u -= 0.5;
-        v -= 0.5;
-        u = u/arg1 + 0.5;
-        v = v/arg2 + 0.5;
+        u = u/arg1;
+        v = v/arg2;
+        break;
+    case 3:
+        _u = u + arg1*v;
+        _v = v + arg2*u;
+        u = _u;
+        v = _v;
         break;
     }
-    scalar_t value = sample_value(image, u, v, w_old, h_old);
+    scalar_t value = sample_value(image, u+0.5, v+0.5, w_old, h_old);
     set_value(result, value, x, y);
 }
 

@@ -35,9 +35,14 @@ def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float, shape=None) -
     return _transform.simple_transform(imgs, ratio, shape, 2)
 
 
+def shear(imgs: torch.Tensor, ratio: tuple[float, float], shape=None) -> torch.Tensor:
+    shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
+    return _transform.simple_transform(imgs, ratio, shape, 3)
+
+
 def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
     from scipy.ndimage import label
-    from convert import threshold
+    from cuda_vision.convert import threshold
     B, _, H, W = imgs.shape
     labeled_image, num_features = label(imgs.cpu())
     labeled_image = torch.from_numpy(labeled_image).float()
@@ -90,8 +95,8 @@ if __name__ == "__main__":
     from convert import invert, threshold
     import math
 
-    train = load_raw('../imgs/training.raw', 256, 256, 3)[:,0:1].contiguous()
+    train = load_raw('../imgs/test1.raw', 256, 256, 3)[:,0:1].contiguous()
     train = invert(train)
-    seg = island_segment(train)
-    compare_imgs_grid(seg, shape=(3, 4), range=None)
+    sh = shear(train, (-0.2, 0))
+    compare_imgs([train, sh])
     plt.show()
