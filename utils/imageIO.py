@@ -37,12 +37,13 @@ def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest'):
         show_img(images[i], range=range, interpolation=interpolation, ax=ax)
 
 
-def compare_imgs_grid(images: list, shape, range=(0.0, 255.0), interpolation='nearest'):
+def compare_imgs_grid(images: list, shape, range=(0.0, 255.0), interpolation='nearest', transpose=False):
     assert shape[0]*shape[1] == len(images)
-    fig, axe = plt.subplots(nrows=shape[0], ncols=shape[1], figsize=(10 * shape[0], 10 * shape[1]))
+    fig, axe = plt.subplots(nrows=shape[0], ncols=shape[1], figsize=(10 * shape[1], 10 * shape[0]))
     for i, axr in enumerate(axe):
         for j, ax in enumerate(axr):
-            show_img(images[i*shape[1]+j], range=range, interpolation=interpolation, ax=ax)
+            idx = j*shape[0]+i if transpose else i*shape[1]+j
+            show_img(images[idx], range=range, interpolation=interpolation, ax=ax)
 
 
 def show_hist(image, bins=256, range=(0, 255), ax=plt):
@@ -69,6 +70,6 @@ def compare_hist(images: list, bins=256, range=(0, 255), accu=False):
 
 
 if __name__ == '__main__':
-    image = load_raw('../imgs/dku_logo_color.raw', 128, 128, 3)
-    show_img(image)
+    texs = [load_raw(f'../imgs/sample{i}.raw', 64, 64, 1) for i in range(1, 16)]
+    compare_imgs_grid(texs, shape=(3, 5), transpose=True)
     plt.show()
