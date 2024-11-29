@@ -33,8 +33,9 @@ def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float) -> torch.Tens
     return imgs
 
 
-def island_segment(imgs: torch.Tensor) -> list[torch.Tensor]:
+def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
     from scipy.ndimage import label
+    from convert import threshold
     B, _, H, W = imgs.shape
     labeled_image, num_features = label(imgs.cpu())
     labeled_image = torch.from_numpy(labeled_image).float()
@@ -44,7 +45,7 @@ def island_segment(imgs: torch.Tensor) -> list[torch.Tensor]:
         _, _, cols, rows = island.nonzero(as_tuple=True)
         y_min, y_max = rows.min().item(), rows.max().item()
         x_min, x_max = cols.min().item(), cols.max().item()
-        return x_min, x_max+1, y_min, y_max+1
+        return x_min-pad, x_max+pad+1, y_min-pad, y_max+pad+1
 
     coord = [get_aabb(island) for island in islands]
     segments = []
@@ -54,6 +55,7 @@ def island_segment(imgs: torch.Tensor) -> list[torch.Tensor]:
         ratio = (W/(x_max-x_min), H/(y_max-y_min))
         island = translate(island, offset=offset)
         island = scale(island, ratio=ratio)
+        island = threshold(island, 0.5)
         segments.append(island)
     return segments
 
@@ -83,11 +85,11 @@ def disk_warp(img: torch.Tensor, inverse=False) -> torch.Tensor:
 
 if __name__ == "__main__":
     from utils.imageIO import *
-    from convert import invert
+    from convert import invert, threshold
     import math
 
     train = load_raw('../imgs/training.raw', 256, 256, 3)[:,0:1].contiguous()
     train = invert(train)
     seg = island_segment(train)
-    compare_imgs([train]+seg, range=None)
+    compare_imgs_grid(seg, shape=(3, 4), range=None)
     plt.show()
