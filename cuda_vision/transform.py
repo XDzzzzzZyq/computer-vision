@@ -13,19 +13,22 @@ class Transform(object):
         self.ratio = ratio if isinstance(ratio, tuple) else (ratio, ratio)
 
 
-def translate(imgs: torch.Tensor, offset: tuple[float, float]) -> torch.Tensor:
-    return _transform.simple_transform(imgs, offset[1], offset[0], 0)
+def translate(imgs: torch.Tensor, offset: tuple[float, float], shape=None) -> torch.Tensor:
+    shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
+    return _transform.simple_transform(imgs, offset[1], offset[0], 0, shape[0], shape[1])
 
 
-def rotate(imgs: torch.Tensor, angle: float) -> torch.Tensor:
-    return _transform.simple_transform(imgs, angle, 0.0, 1)
+def rotate(imgs: torch.Tensor, angle: float, shape=None) -> torch.Tensor:
+    shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
+    return _transform.simple_transform(imgs, angle, 0.0, 1, shape[0], shape[1])
 
 
-def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float) -> torch.Tensor:
+def scale(imgs: torch.Tensor, ratio: tuple[float, float] or float, shape=None) -> torch.Tensor:
+    shape = (imgs.shape[2], imgs.shape[3]) if shape is None else shape
     if isinstance(ratio, tuple):
         if ratio[0] == 0.0 or ratio[1] == 0.0:
             return torch.zeros_like(imgs)
-        return _transform.simple_transform(imgs, ratio[1], ratio[0], 2)
+        return _transform.simple_transform(imgs, ratio[1], ratio[0], 2, shape[0], shape[1])
     elif isinstance(ratio, float):
         if ratio == 0.0:
             return torch.zeros_like(imgs)
@@ -54,7 +57,7 @@ def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
         offset = (W/2 - (x_max+x_min)/2, H/2 - (y_max+y_min)/2)
         ratio = (W/(x_max-x_min), H/(y_max-y_min))
         island = translate(island, offset=offset)
-        island = scale(island, ratio=ratio)
+        island = scale(island, ratio=ratio, shape=(32, 32))
         island = threshold(island, 0.5)
         segments.append(island)
     return segments

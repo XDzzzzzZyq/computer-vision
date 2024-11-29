@@ -16,7 +16,8 @@ static __global__ void simple_transform_kernel(
     scalar_t* result,
     const scalar_t* image,
     float arg1, float arg2,
-    int mode
+    int mode,
+    int w_old, int h_old
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
@@ -29,8 +30,8 @@ static __global__ void simple_transform_kernel(
 
     switch(mode){
     case 0:
-        u -= arg1/float(w);
-        v -= arg2/float(h);
+        u -= arg1/float(w_old);
+        v -= arg2/float(h_old);
         break;
     case 1:
         u -= 0.5;
@@ -47,7 +48,7 @@ static __global__ void simple_transform_kernel(
         v = v/arg2 + 0.5;
         break;
     }
-    scalar_t value = sample_value(image, u, v);
+    scalar_t value = sample_value(image, u, v, w_old, h_old);
     set_value(result, value, x, y);
 }
 
@@ -56,21 +57,22 @@ static __global__ void custom_transform_kernel(
     scalar_t* result,
     const scalar_t* image,
     const float* inv,
-    float off_x, float off_y
+    float off_x, float off_y,
+    int w_old, int h_old
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
     int h = gridDim.x;
     int w = gridDim.y;
 
-    float u = (float(x)+0.5)/float(w) - 0.5 - off_x / w;
-    float v = (float(y)+0.5)/float(h) - 0.5 - off_y / h;
+    float u = (float(x)+0.5)/float(w) - 0.5 - off_x / w_old;
+    float v = (float(y)+0.5)/float(h) - 0.5 - off_y / h_old;
     float _u = u * inv[0] + v * inv[1];
     float _v = u * inv[2] + v * inv[3];
     u = _u + 0.5;
     v = _v + 0.5;
 
-    scalar_t value = sample_value(image, u, v);
+    scalar_t value = sample_value(image, u, v, w_old, h_old);
     set_value(result, value, x, y);
 }
 
@@ -115,13 +117,16 @@ void simple_transform_op(
     int c = image.size(1);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int h_new = result.size(2);
+    int w_new = result.size(3);
+    dim3 grid_size(h_new, w_new, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "simple_transform_kernel", [&] {
         simple_transform_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
-            arg1, arg2, mode
+            arg1, arg2, mode,
+            w, h
         );
     });
 }
@@ -139,7 +144,9 @@ void custom_transform_op(
     int c = image.size(1);
     int h = image.size(2);
     int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int h_new = result.size(2);
+    int w_new = result.size(3);
+    dim3 grid_size(h_new, w_new, b);
 
     torch::Tensor inv = matrix.index({torch::indexing::Slice(0, 2), torch::indexing::Slice(0, 2)});
     inv = torch::linalg::inv(inv);
@@ -148,7 +155,8 @@ void custom_transform_op(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             inv.data_ptr<float>(),
-            matrix.index({0, 2}).item<float>(), matrix.index({1, 2}).item<float>()
+            matrix.index({0, 2}).item<float>(), matrix.index({1, 2}).item<float>(),
+            w, h
         );
     });
 }

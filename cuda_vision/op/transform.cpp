@@ -22,20 +22,22 @@ void disk_warp_op(
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
 #define CHECK_INPUT(x) CHECK_CUDA(x); CHECK_CONTIGUOUS(x)
 
-torch::Tensor simple_transform(const torch::Tensor& image, float arg1, float arg2, int mode) {
+torch::Tensor simple_transform(const torch::Tensor& image, float arg1, float arg2, int mode, int w_new, int h_new) {
     CHECK_INPUT(image);
 
-    torch::Tensor result = torch::empty_like(image);
+    int B = image.size(0);
+    torch::Tensor result = torch::empty({B, 1, h_new, w_new}).to(image.device());
     simple_transform_op(result, image, arg1, arg2, mode);
 
     return result;
 }
 
-torch::Tensor custom_transform(const torch::Tensor& image, const torch::Tensor& matrix) {
+torch::Tensor custom_transform(const torch::Tensor& image, const torch::Tensor& matrix, int w_new, int h_new) {
     CHECK_INPUT(image);
     CHECK_INPUT(matrix);
 
-    torch::Tensor result = torch::empty_like(image);
+    int B = image.size(0);
+    torch::Tensor result = torch::empty({B, 1, h_new, w_new}).to(image.device());
     custom_transform_op(result, image, matrix);
 
     return result;
