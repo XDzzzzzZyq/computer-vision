@@ -66,15 +66,12 @@ def get_metric_properties(imgs: torch.Tensor) -> torch.Tensor:
 
 
 def get_holes_num(imgs: torch.Tensor, max_iter=50) -> torch.Tensor:
-    from cuda_vision.filters import morphology
     from cuda_vision.convert import invert
-    shrink = invert(imgs)
-    for i in range(max_iter):
-        temp = morphology(shrink, 's')
-        if torch.allclose(temp, shrink):
-            break
-        shrink = temp
-    return shrink.sum(dim=2).sum(dim=2)/255
+    from scipy.ndimage import label
+    imgs = invert(imgs).cpu()
+    num = [label(img.cpu())[1]-1 for img in imgs]
+    return torch.tensor(num).float().unsqueeze(1).to(imgs.device)
+
 
 if __name__ == "__main__":
     from utils.imageIO import *
@@ -87,4 +84,3 @@ if __name__ == "__main__":
     segments = torch.cat(segments, dim=0)
     segments = get_holes_num(segments)
     print(segments)
-    plt.show()
