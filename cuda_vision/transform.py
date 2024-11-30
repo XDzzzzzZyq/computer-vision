@@ -40,7 +40,11 @@ def shear(imgs: torch.Tensor, ratio: tuple[float, float], shape=None) -> torch.T
     return _transform.simple_transform(imgs, ratio, shape, 3)
 
 
-def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
+def reshape(imgs: torch.Tensor, shape: tuple[int, int]) -> torch.Tensor:
+    return translate(imgs, offset=(0, 0), shape=shape)
+
+
+def island_segment(imgs: torch.Tensor, pad=3, width=32) -> (list[torch.Tensor], list[float]):
     from scipy.ndimage import label
     from cuda_vision.convert import threshold
     B, _, H, W = imgs.shape
@@ -56,15 +60,17 @@ def island_segment(imgs: torch.Tensor, pad=3) -> list[torch.Tensor]:
 
     coord = [get_aabb(island) for island in islands]
     segments = []
+    aspect = []
     for c, island in zip(coord, islands):
         x_min, x_max, y_min, y_max = c
         offset = (W/2 - (x_max+x_min)/2, H/2 - (y_max+y_min)/2)
         ratio = (W/(x_max-x_min), H/(y_max-y_min))
         island = translate(island, offset=offset)
-        island = scale(island, ratio=ratio, shape=(32, 32))
+        island = scale(island, ratio=ratio, shape=(width, width))
         island = threshold(island, 0.5)
         segments.append(island)
-    return segments
+        aspect.append((y_max-y_min)/(x_max-x_min))
+    return segments, torch.tensor(aspect).to(imgs.device)[:, None]
 
 
 def custom_transform(imgs: torch.Tensor, trans: torch.Tensor or Transform, shape=None) -> torch.Tensor:
@@ -102,5 +108,5 @@ if __name__ == "__main__":
     compare_imgs_grid(segments, shape=(3, 4))
     segments = torch.cat(segments, dim=0)
     props = get_metric_properties(segments)
-    print(props)
+    print(torch.cat([ratio, props], dim=1))
     plt.show()

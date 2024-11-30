@@ -60,15 +60,31 @@ def get_metric_properties(imgs: torch.Tensor) -> torch.Tensor:
     nsq = 1/math.sqrt(2)
     weights = torch.tensor([[.0, .25, .25, .25, .25, .5, .5, .5, .5, .875, .875, .875, .875, 1., .75, .75],
                             [.0, nsq, nsq, nsq, nsq, 1., 1., 1., 1., nsq, nsq, nsq, nsq, .0, 2*nsq, 2*nsq]])
-    print(qs)
-    return torch.matmul(weights.to(qs.device)[None,:,:], qs[:,:,None])
+    ap = torch.matmul(weights.to(qs.device)[None, :, :], qs[:, :, None]).squeeze(2)
+    r = ap[:, 0:1] / ap[:, 1:2]
+    return torch.cat([ap, r], dim=1)
 
+
+def get_holes_num(imgs: torch.Tensor, max_iter=50) -> torch.Tensor:
+    from cuda_vision.filters import morphology
+    from cuda_vision.convert import invert
+    shrink = invert(imgs)
+    for i in range(max_iter):
+        temp = morphology(shrink, 's')
+        if torch.allclose(temp, shrink):
+            break
+        shrink = temp
+    return shrink.sum(dim=2).sum(dim=2)/255
 
 if __name__ == "__main__":
     from utils.imageIO import *
+    from cuda_vision.convert import invert
+    from cuda_vision.transform import island_segment
 
-    tex = load_raw('../imgs/comb1.raw', 256, 256, 1)
-    a = get_full_features(tex, 8, normalize=True)
-    list = [a[:, t:t+1] for t in range(a.shape[1])]
-    compare_imgs_grid(list, shape=(4, 4))
+    train = load_raw('../imgs/training.raw', 256, 256, 3)[:, 0:1].contiguous()
+    train = invert(train)
+    segments, ratio = island_segment(train, pad=2)
+    segments = torch.cat(segments, dim=0)
+    segments = get_holes_num(segments)
+    print(segments)
     plt.show()
