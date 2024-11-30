@@ -93,10 +93,14 @@ def disk_warp(img: torch.Tensor, inverse=False) -> torch.Tensor:
 if __name__ == "__main__":
     from utils.imageIO import *
     from convert import invert, threshold
+    from feature import get_metric_properties
     import math
 
-    train = load_raw('../imgs/test1.raw', 256, 256, 3)[:,0:1].contiguous()
+    train = load_raw('../imgs/training.raw', 256, 256, 3)[:,0:1].contiguous()
     train = invert(train)
-    sh = shear(train, (-0.2, 0))
-    compare_imgs([train, sh])
+    segments, ratio = island_segment(train)
+    compare_imgs_grid(segments, shape=(3, 4))
+    segments = torch.cat(segments, dim=0)
+    props = get_metric_properties(segments)
+    print(props)
     plt.show()

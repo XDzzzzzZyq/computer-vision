@@ -260,3 +260,14 @@ def get_laws_kernel():
     v = torch.stack([L3laws, E3laws, S3laws], dim=0)
     outer = torch.einsum('ik,jl->ijkl', v, v)
     return outer.reshape(9, 3, 3)
+
+
+def get_metric_patterns():
+    Q = torch.tensor(
+        [[[0, 0], [0, 0]],
+         [[1, 0], [0, 0]], [[0, 1], [0, 0]], [[0, 0], [1, 0]], [[0, 0], [0, 1]],
+         [[1, 1], [0, 0]], [[0, 1], [0, 1]], [[0, 0], [1, 1]], [[1, 0], [1, 0]],
+         [[1, 1], [0, 1]], [[0, 1], [1, 1]], [[1, 0], [1, 1]], [[1, 1], [1, 0]],
+         [[1, 1], [1, 1]],
+         [[1, 0], [0, 1]], [[0, 1], [1, 0]]]).float()
+    return Q

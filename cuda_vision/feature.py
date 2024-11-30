@@ -50,6 +50,20 @@ def get_full_features(imgs: torch.Tensor, window=4, normalize=True, sat=None) ->
     return features
 
 
+def get_metric_properties(imgs: torch.Tensor) -> torch.Tensor:
+    assert imgs.ndim == 4
+    assert imgs.shape[2] % 2 == imgs.shape[3] % 2 == 0
+    from cuda_vision.__kernels import get_metric_patterns
+    import math
+    patterns = get_metric_patterns().to(imgs.device)
+    qs = _stats.get_metric_properties(imgs, patterns).float()
+    nsq = 1/math.sqrt(2)
+    weights = torch.tensor([[.0, .25, .25, .25, .25, .5, .5, .5, .5, .875, .875, .875, .875, 1., .75, .75],
+                            [.0, nsq, nsq, nsq, nsq, 1., 1., 1., 1., nsq, nsq, nsq, nsq, .0, 2*nsq, 2*nsq]])
+    print(qs)
+    return torch.matmul(weights.to(qs.device)[None,:,:], qs[:,:,None])
+
+
 if __name__ == "__main__":
     from utils.imageIO import *
 

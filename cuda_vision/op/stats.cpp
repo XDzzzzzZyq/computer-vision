@@ -15,6 +15,11 @@ void get_minmaxmedian_op(
     const torch::Tensor& image,
     int window
 );
+void metric_properties_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& patterns
+);
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
 #define CHECK_CONTIGUOUS(x) TORCH_CHECK(x.is_contiguous(), #x " must be contiguous")
@@ -54,8 +59,21 @@ torch::Tensor get_minmaxmedian(const torch::Tensor& image, int window) {
     return result;
 }
 
+torch::Tensor get_metric_properties(const torch::Tensor& image, const torch::Tensor& patterns) {
+    CHECK_INPUT(image);
+    CHECK_INPUT(patterns);
+
+    int B = image.size(0);
+    int N = patterns.size(0);
+    torch::Tensor result = torch::zeros({B, N}, torch::kInt).to(image.device());
+    metric_properties_op(result, image, patterns);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("to_sat", &to_sat, "Construct the Summed Area Table (SAT)");
     m.def("get_momentum", &get_momentum, "Estimate the centralized momentum up to k-order");
     m.def("get_minmaxmedian", &get_minmaxmedian, "Calculate the Min, Max, and Medium");
+    m.def("get_metric_properties", &get_metric_properties, "Get Metric (Area, Perimeter) Properties");
 }

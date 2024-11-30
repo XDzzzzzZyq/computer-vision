@@ -155,6 +155,34 @@ static __global__ void minmaxmedian_kernel(
     }
 }
 
+template <typename scalar_t>
+static __global__ void metric_properties_kernel(
+    int* result,
+    const scalar_t* image,
+    const scalar_t* patterns
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int b = blockIdx.z;
+    int h = gridDim.x+1;
+    int w = gridDim.y+1;
+    int n = blockDim.x;
+    int t = threadIdx.x;
+
+    extern __shared__ char __shared_buffer[];
+    scalar_t* array = reinterpret_cast<scalar_t*>(__shared_buffer);
+    if(t<=4)
+        array[t] = get_value(image, x+t%2, y+t/2, w, h);
+    __syncthreads();
+
+    bool match = true;
+    for (int i = 0; i<4; i++)
+        match &= array[i] == patterns[t*4+i] * 255;
+
+    if(match)
+        atomicAdd(&result[b*n+t], 1);
+}
+
 // C++ API
 
 void to_sat_op(
@@ -239,6 +267,30 @@ void get_minmaxmedian_op(
             result.data_ptr<scalar_t>(),
             image.data_ptr<scalar_t>(),
             window, w, h
+        );
+    });
+}
+
+void metric_properties_op(
+    torch::Tensor& result,
+    const torch::Tensor& image,
+    const torch::Tensor& patterns
+) {
+    int curDevice = -1;
+    cudaGetDevice(&curDevice);
+    cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
+
+    int b = image.size(0);
+    int h = image.size(2);
+    int w = image.size(3);
+    int n = patterns.size(0);
+    dim3 grid_size(h-1, w-1, b);
+
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "metric_properties_kernel", [&] {
+        metric_properties_kernel<scalar_t><<<grid_size, n, 4*sizeof(scalar_t), stream>>>(
+            result.data_ptr<int>(),
+            image.data_ptr<scalar_t>(),
+            patterns.data_ptr<scalar_t>()
         );
     });
 }
