@@ -68,7 +68,7 @@ def get_metric_properties(imgs: torch.Tensor) -> torch.Tensor:
 def get_holes_num(imgs: torch.Tensor, max_iter=50) -> torch.Tensor:
     from cuda_vision.convert import invert
     from scipy.ndimage import label
-    imgs = invert(imgs).cpu()
+    imgs = invert(imgs)
     num = [label(img.cpu())[1]-1 for img in imgs]
     return torch.tensor(num).float().unsqueeze(1).to(imgs.device)
 

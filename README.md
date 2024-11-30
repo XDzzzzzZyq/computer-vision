@@ -57,6 +57,24 @@ The following functionalities are supported:
 - Pattern Matching
 - Morphology Operations: ```shrink```, ```thin```, ```skeletonize```, ...
 
+`detect`
+
+- Edge detection (Gradient method & Laplacian method)
+
+`transform`
+
+- Elementary Transformation
+- Homogeneous Matrix Transformation
+- Disk Warping
+
+`feature`
+
+- Momentum Features
+- Law's Features
+- Min / Max / Median
+- Geometry (Metric) Features
+- Topology (Euler) Features
+
 ### Utils
 
 For imageIO and visualization, tools are provided in the ```utils```.
@@ -85,4 +103,5 @@ compare_hist([ori, noi, denoised], accu=True)
 
 - Matplotlib
 - Pytorch (CUDA)
+- SciPy
 - A Nvidia Graphics Card
