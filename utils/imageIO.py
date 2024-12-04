@@ -22,6 +22,16 @@ def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
     return image.to(device).float()
 
 
+def load_png(path: str, device='cuda'):
+    import imageio.v2 as imageio
+    image = imageio.imread(path)
+    image = torch.from_numpy(image)
+    image = image.transpose(0, 2).unsqueeze(0).contiguous()
+    if image.shape[1] == 4:
+        image = image[:, 0:3].contiguous()
+    return image.to(device).float()
+
+
 def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
     if image.ndim == 4:
         image = image[0]
