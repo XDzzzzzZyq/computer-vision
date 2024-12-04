@@ -27,9 +27,9 @@ torch::Tensor simple_transform(const torch::Tensor& image, std::tuple<float, flo
     CHECK_INPUT(image);
 
     int B = image.size(0);
-    int H = std::get<1>(shape);
     int W = std::get<0>(shape);
-    torch::Tensor result = torch::empty({B, 1, H, W}).to(image.device());
+    int H = std::get<1>(shape);
+    torch::Tensor result = torch::empty({B, 1, W, H}).to(image.device());
     simple_transform_op(result, image, std::get<1>(args), std::get<0>(args), mode);
 
     return result;
@@ -40,9 +40,9 @@ torch::Tensor custom_transform(const torch::Tensor& image, const torch::Tensor& 
     CHECK_INPUT(matrix);
 
     int B = image.size(0);
-    int H = std::get<1>(shape);
     int W = std::get<0>(shape);
-    torch::Tensor result = torch::empty({B, 1, H, W}).to(image.device());
+    int H = std::get<1>(shape);
+    torch::Tensor result = torch::empty({B, 1, W, H}).to(image.device());
     custom_transform_op(result, image, matrix);
 
     return result;

@@ -45,8 +45,8 @@ static __global__ void semi_conv_gray_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y - 2 * (pad - size);
+    int w = gridDim.x;
+    int h = gridDim.y - 2 * (pad - size);
     extern __shared__ char __shared_buffer[];
     scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
 
@@ -78,9 +78,9 @@ static __global__ void semi_bilateral_conv_gray_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
+    int w = gridDim.x;
     int e = size-pad;
-    int w = gridDim.y + 2 * e;
+    int h = gridDim.y + 2 * e;
     extern __shared__ char __shared_buffer[];
     scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
 
@@ -137,8 +137,8 @@ static __global__ void full_conv_gray_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x - 2 * (pad - size);
-    int w = gridDim.y - 2 * (pad - size);
+    int w = gridDim.x - 2 * (pad - size);
+    int h = gridDim.y - 2 * (pad - size);
     int n = size*2+1;
     extern __shared__ char __shared_buffer[];
     scalar_t* buffer = reinterpret_cast<scalar_t*>(__shared_buffer);
@@ -172,8 +172,8 @@ static __global__ void full_multi_conv_gray_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x - 2 * (pad - size);
-    int w = gridDim.y - 2 * (pad - size);
+    int w = gridDim.x - 2 * (pad - size);
+    int h = gridDim.y - 2 * (pad - size);
     int n = size*2+1;
     int k = blockDim.x;  // kernel num
 
@@ -209,8 +209,8 @@ static __global__ void median_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x - 2 * (pad - size);
-    int w = gridDim.y - 2 * (pad - size);
+    int w = gridDim.x - 2 * (pad - size);
+    int h = gridDim.y - 2 * (pad - size);
     int n = size*2+1;
     int len = n*n;
     int m = (len+1)/2;
@@ -254,8 +254,8 @@ static __global__ void pattern_match_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
     int n = blockDim.x;
 
     extern __shared__ char __shared_buffer[];
@@ -327,13 +327,13 @@ void separable_conv_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int e = pad - size;
     int l = 2*size+1;
 
-    torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
-    dim3 grid_size1(h,     w+2*e, b);
+    torch::Tensor temp = torch::empty({b, c, h+2*e, w}).to(image.device()); // transpose
+    dim3 grid_size1(w,     h+2*e, b);
     dim3 grid_size2(h+2*e, w+2*e, b);
 
     if(c == 3){
@@ -385,11 +385,11 @@ void full_conv_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int l = (2*size+1)*(2*size+1);
     int e = pad - size;
-    dim3 grid_size(h+2*e, w+2*e, b);
+    dim3 grid_size(w+2*e, h+2*e, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "full_conv_gray_kernel", [&] {
         full_conv_gray_kernel<scalar_t><<<grid_size, l, l*sizeof(scalar_t), stream>>>(
@@ -455,12 +455,12 @@ void custom_multi_conv_op(
     int size = kernels.size(1) / 2;
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int l = (2*size+1)*(2*size+1);
     int k = kernels.size(0);
     int e = pad - size;
-    dim3 grid_size(h+2*e, w+2*e, b);
+    dim3 grid_size(w+2*e, h+2*e, b);
     dim3 block_size(k, l, 1);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "full_multi_conv_gray_kernel", [&] {
@@ -483,14 +483,14 @@ void median_filter_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int e = pad - size;
     int n = 2*size+1;
 
     cudaDeviceSetLimit(cudaLimitStackSize, n*n*1024+1024);
 
-    dim3 grid_size(h+2*e, w+2*e, b);
+    dim3 grid_size(w+2*e, h+2*e, b);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "median_kernel", [&] {
         median_kernel<scalar_t><<<grid_size, n*n, n*n*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
@@ -512,16 +512,16 @@ void bilateral_filter_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int e = pad - size;
     int l = 2*size+1;
 
     float* kernel = make_array<float>(2*size+1, 0);
     get_gaussian_kernel<<<1, 2*size+1, (2*size+1)*sizeof(float), stream>>>(kernel, std_k, size);
 
-    torch::Tensor temp = torch::empty({b, c, w+2*e, h}).to(image.device()); // transpose
-    dim3 grid_size1(h,     w+2*e, b);
+    torch::Tensor temp = torch::empty({b, c, h+2*e, w}).to(image.device()); // transpose
+    dim3 grid_size1(w    , h+2*e, b);
     dim3 grid_size2(h+2*e, w+2*e, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "semi_bilateral_conv_gray_kernel", [&] {
@@ -559,11 +559,11 @@ void pattern_match_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int n = pattern.size(0);
 
-    dim3 grid_size(h, w, b);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "pattern_match_kernel", [&] {
         pattern_match_kernel<scalar_t><<<grid_size, n, n*sizeof(char), stream>>>(

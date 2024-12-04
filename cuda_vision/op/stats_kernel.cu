@@ -42,7 +42,7 @@ static __global__ void semi_sat_kernel(
     int o = blockIdx.y;
     int c = gridDim.y;
     int w = blockDim.x*2;
-    int h = gridDim.x;
+    int w = gridDim.x;
     
     unsigned int rd_id;
 	unsigned int wr_id;
@@ -164,8 +164,8 @@ static __global__ void metric_properties_kernel(
     int x = blockIdx.x;
     int y = blockIdx.y;
     int b = blockIdx.z;
-    int h = gridDim.x+1;
-    int w = gridDim.y+1;
+    int w = gridDim.x+1;
+    int h = gridDim.y+1;
     int n = blockDim.x;
     int t = threadIdx.x;
 
@@ -195,10 +195,10 @@ void to_sat_op(
 
     int b = image.size(0);
     int o = result.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size0(h, w, b);
-    dim3 grid_size1(h, o, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size0(w, h, b);
+    dim3 grid_size1(w, o, b);
 
     torch::Tensor temp1 = torch::empty_like(result);
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "fill_momentum_kernel", [&] {
@@ -236,7 +236,7 @@ void get_momentum_op(
     int o = result.size(1);
     int h = sat.size(2);
     int w = sat.size(3);
-    dim3 grid_size0(h/window, w/window, b);
+    dim3 grid_size0(w/window, h/window, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(sat.scalar_type(), "estimate_momentum_kernel", [&] {
         estimate_momentum_kernel<scalar_t><<<grid_size0, o, o*sizeof(scalar_t), stream>>>(
@@ -257,10 +257,10 @@ void get_minmaxmedian_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = result.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int n = window * window;
-    dim3 grid_size0(h/window, w/window, b);
+    dim3 grid_size0(w/window, h/window, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "minmaxmedian_kernel", [&] {
         minmaxmedian_kernel<scalar_t><<<grid_size0, n, n*sizeof(scalar_t), stream>>>(
@@ -281,10 +281,10 @@ void metric_properties_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int n = patterns.size(0);
-    dim3 grid_size(h-1, w-1, b);
+    dim3 grid_size(w-1, h-1, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "metric_properties_kernel", [&] {
         metric_properties_kernel<scalar_t><<<grid_size, n, 4*sizeof(scalar_t), stream>>>(

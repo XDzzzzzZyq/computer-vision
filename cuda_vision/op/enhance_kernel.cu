@@ -112,9 +112,9 @@ void minmax_scale_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     int* batched_min = make_array(b, INT_MAX);
     int* batched_max = make_array(b, INT_MIN);
@@ -147,9 +147,9 @@ void histo_equal_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     int* table = make_array(b * 256, 0);
     float* mapping = make_array(b * (k+1), 0.0f);

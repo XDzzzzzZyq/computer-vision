@@ -108,8 +108,8 @@ static __global__ void matrix_dither_kernel(
     const scalar_t* index,
     int n
 ) {
-    int h = gridDim.x * n;
-    int w = gridDim.y * n;
+    int w = gridDim.x * n;
+    int h = gridDim.y * n;
     int t = threadIdx.x;
     int bx = t % n;
     int by = t / n;
@@ -130,7 +130,7 @@ static __global__ void error_diffusion_kernel(
     const scalar_t* image,
     const scalar_t* diffuse,
     float threshold, bool serpentine,
-    int n, int h, int w
+    int n, int w, int h
 ) {
     int t = threadIdx.x;
     int off_idx = 1+n*n/2;
@@ -171,9 +171,9 @@ void to_grayscale_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "to_grayscale_kernel", [&] {
         to_grayscale_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -193,9 +193,9 @@ void invert_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "invert_kernel", [&] {
         invert_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -217,9 +217,9 @@ void hash_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "hash_kernel", [&] {
         hash_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -241,9 +241,9 @@ void threshold_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "threshold_kernel", [&] {
         threshold_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -265,9 +265,9 @@ void random_threshold_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "random_threshold_kernel", [&] {
         random_threshold_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -288,10 +288,10 @@ void matrix_dither_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int n = index.size(0);
-    dim3 grid_size(h/n, w/n, b);
+    dim3 grid_size(w/n, h/n, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "matrix_dither_kernel", [&] {
         matrix_dither_kernel<scalar_t><<<grid_size, n*n, 0, stream>>>(
@@ -314,8 +314,8 @@ void error_diffusion_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int n = diffuse.size(0);
     dim3 grid_size(1, 1, b);
 
@@ -327,7 +327,7 @@ void error_diffusion_op(
             image.data_ptr<scalar_t>(),
             diffuse.data_ptr<scalar_t>(),
             threshold, serpentine,
-            n, h, w
+            n, w, h
         );
     });
 }

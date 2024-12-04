@@ -3,7 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 
 
-def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
+def load_raw(path: str, h, w, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
     """
     :param path:   Path of .raw
     :param w:      Specify the width
@@ -12,12 +12,12 @@ def load_raw(path: str, w, h, c, dtype=np.uint8, device='cuda') -> torch.Tensor:
     :param dtype:  Specify the pixle type
     :param device: Specify the device
     :return:
-        Tensor with shape (B, C, H, W)
+        Tensor with shape (B, C, W, H)
     """
 
     image = np.fromfile(path, dtype=dtype)
     image = torch.from_numpy(image)
-    image = image.reshape(w, h, c)
+    image = image.reshape(h, w, c)
     image = image.transpose(0, 2).unsqueeze(0).contiguous()
     return image.to(device).float()
 

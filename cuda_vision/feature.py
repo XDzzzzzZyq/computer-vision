@@ -27,9 +27,9 @@ def get_laws_features(imgs: torch.Tensor, window=4) -> torch.Tensor:
     from cuda_vision.filters import custom_multi_conv
     assert window > 1
     kernels = get_laws_kernel().to(imgs.device)
-    B, _, H, W = imgs.shape
-    features = custom_multi_conv(imgs, kernels, 1) # B, 9, H, W
-    features = features.reshape(B*9, 1, H, W)
+    B, _, W, H = imgs.shape
+    features = custom_multi_conv(imgs, kernels, 1) # B, 9, W, H
+    features = features.reshape(B*9, 1, W, H)
     features = get_momentum_features(features, 2, window) # B*9, 2, H//window, W//window
     return features.reshape(B, 9, 2, H//window, W//window)[:, :, 1]
 
@@ -43,10 +43,10 @@ def get_full_features(imgs: torch.Tensor, window=4, normalize=True, sat=None) ->
     assert features.shape[1] == 4 + 3 + 9
     if normalize:
         from cuda_vision.enhance import minmax_scale
-        B, F, H, W = features.shape
-        features = features.reshape(B*F, 1, H, W)
+        B, F, W, H = features.shape
+        features = features.reshape(B*F, 1, W, H)
         features = minmax_scale(features)
-        features = features.reshape(B, F, H, W)
+        features = features.reshape(B, F, W, H)
     return features
 
 

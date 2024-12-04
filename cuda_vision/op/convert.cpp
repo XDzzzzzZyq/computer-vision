@@ -42,10 +42,10 @@ void error_diffusion_op(
 torch::Tensor to_grayscale(const torch::Tensor& image) {
     CHECK_INPUT(image);
 
-    int b = image.size(0);
-    int h = image.size(2);
-    int w = image.size(3);
-    torch::Tensor gray = torch::empty({b, 1, h, w}).to(image.device());
+    int B = image.size(0);
+    int W = image.size(2);
+    int H = image.size(3);
+    torch::Tensor gray = torch::empty({B, 1, W, H}).to(image.device());
     to_grayscale_op(gray, image);
 
     return gray;

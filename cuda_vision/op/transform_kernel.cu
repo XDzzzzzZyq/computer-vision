@@ -21,8 +21,8 @@ static __global__ void simple_transform_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
 
     float u = (float(x)+0.5)/float(w) - 0.5;
     float v = (float(y)+0.5)/float(h) - 0.5;
@@ -64,8 +64,8 @@ static __global__ void custom_transform_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
 
     float u = (float(x)+0.5)/float(w) - 0.5 - off_x / w_old;
     float v = (float(y)+0.5)/float(h) - 0.5 - off_y / h_old;
@@ -86,8 +86,8 @@ static __global__ void disk_warp_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
 
     float u = (float(x)+0.5)/float(w) - 0.5;
     float v = (float(y)+0.5)/float(h) - 0.5;
@@ -117,11 +117,11 @@ void simple_transform_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    int h_new = result.size(2);
-    int w_new = result.size(3);
-    dim3 grid_size(h_new, w_new, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    int w_new = result.size(2);
+    int h_new = result.size(3);
+    dim3 grid_size(w_new, h_new, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "simple_transform_kernel", [&] {
         simple_transform_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
@@ -144,11 +144,11 @@ void custom_transform_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
+    int w = image.size(2);
+    int h = image.size(3);
     int h_new = result.size(2);
     int w_new = result.size(3);
-    dim3 grid_size(h_new, w_new, b);
+    dim3 grid_size(w_new, h_new, b);
 
     torch::Tensor inv = matrix.index({torch::indexing::Slice(0, 2), torch::indexing::Slice(0, 2)});
     inv = torch::linalg::inv(inv);
@@ -174,9 +174,9 @@ void disk_warp_op(
 
     int b = image.size(0);
     int c = image.size(1);
-    int h = image.size(2);
-    int w = image.size(3);
-    dim3 grid_size(h, w, b);
+    int w = image.size(2);
+    int h = image.size(3);
+    dim3 grid_size(w, h, b);
 
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "disk_warp_kernel", [&] {
         disk_warp_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(

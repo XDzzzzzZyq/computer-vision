@@ -18,8 +18,8 @@ static __global__ void zero_crossing_kernel(
 ) {
     int x = blockIdx.x;
     int y = blockIdx.y;
-    int h = gridDim.x;
-    int w = gridDim.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
 
     extern __shared__ char __shared_buffer[];
     scalar_t* array = reinterpret_cast<scalar_t*>(__shared_buffer);
@@ -84,9 +84,9 @@ void zero_crossing_op(
     cudaStream_t stream = at::cuda::getCurrentCUDAStream(curDevice);
 
     int b = lap.size(0);
-    int h = lap.size(2);
-    int w = lap.size(3);
-    dim3 grid_size(h, w, b);
+    int w = lap.size(2);
+    int h = lap.size(3);
+    dim3 grid_size(w, h, b);
 
     int n = mode == 0 ? 5 : 9;
 

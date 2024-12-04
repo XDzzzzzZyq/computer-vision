@@ -47,7 +47,7 @@ def reshape(imgs: torch.Tensor, shape: tuple[int, int]) -> torch.Tensor:
 def island_segment(imgs: torch.Tensor, pad=3, width=32) -> (list[torch.Tensor], list[float]):
     from scipy.ndimage import label
     from cuda_vision.convert import threshold
-    B, _, H, W = imgs.shape
+    B, _, W, H = imgs.shape
     labeled_image, num_features = label(imgs.cpu())
     labeled_image = torch.from_numpy(labeled_image).float()
     islands = [(labeled_image == label).float().to(imgs.device) for label in range(1, num_features+1)]
