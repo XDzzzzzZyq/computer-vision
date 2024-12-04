@@ -156,3 +156,32 @@ static __device__ scalar_t sample_value(
     scalar_t f1 = LINEAR(f01, f11, fx);
     return LINEAR(f0, f1, fy);
 }
+
+template <typename scalar_t>
+static __device__ pixel<scalar_t> sample_pixel(
+    const scalar_t* image,
+    float u, float v, int w=0, int h=0
+){
+    w = w == 0 ? gridDim.x : w;
+    h = h == 0 ? gridDim.y : h;
+    int batch_off = blockIdx.z * h * w;
+
+    int x0 = std::floor(u*w-0.5);
+    int y0 = std::floor(v*h-0.5);
+    int x1 = x0+1;
+    int y1 = y0+1;
+
+#define _GET_P(x, y) (IS_OUT(x, y, w, h) ? pixel<scalar_t>() : get_pixel(image, x, y, w, h))
+    pixel<scalar_t> f00 = _GET_P(x0, y0);
+    pixel<scalar_t> f10 = _GET_P(x1, y0);
+    pixel<scalar_t> f01 = _GET_P(x0, y1);
+    pixel<scalar_t> f11 = _GET_P(x1, y1);
+
+    float fx = u*w-0.5-x0;
+    float fy = v*h-0.5-y0;
+
+#define LINEAR_P(a, b, f) (b*f + a*(1.0-f))
+    pixel<scalar_t> f0 = LINEAR_P(f00, f10, fx);
+    pixel<scalar_t> f1 = LINEAR_P(f01, f11, fx);
+    return LINEAR_P(f0, f1, fy);
+}
