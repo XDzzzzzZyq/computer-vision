@@ -40,9 +40,9 @@ def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
               interpolation=interpolation)
 
 
-def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest'):
+def compare_imgs(images: list, range=(0.0, 255.0), interpolation='nearest', size=(10, 10)):
     n = len(images)
-    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(10 * n, 10))
+    fig, axe = plt.subplots(nrows=1, ncols=n, figsize=(size[0] * n, size[1]))
     for i, ax in enumerate(axe):
         show_img(images[i], range=range, interpolation=interpolation, ax=ax)
 
