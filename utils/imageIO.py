@@ -32,6 +32,12 @@ def load_png(path: str, device='cuda'):
     return image.to(device).float()
 
 
+def save_png(path: str, img: torch.Tensor):
+    import imageio.v2 as imageio
+    img = img.squeeze(0).transpose(0, 2)
+    imageio.imwrite(path, img.cpu().to(torch.uint8))
+
+
 def show_img(image, range=(0.0, 255.0), interpolation='nearest', ax=plt):
     if image.ndim == 4:
         image = image[0]
