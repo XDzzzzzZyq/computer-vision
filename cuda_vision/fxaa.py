@@ -12,9 +12,10 @@ def mark_edge(img: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
     return _fxaa.mark_edge(gray, grad_x, grad_y, thres_min, thres_max)
 
 
-def performance(img: torch.Tensor, thres_min, thres_max, r, hdr=False) -> (torch.Tensor, torch.Tensor):
+def performance(img: torch.Tensor, thres_min, thres_max, r=1.0, hdr=False, smooth=False) -> (torch.Tensor, torch.Tensor):
     edge = mark_edge(img, thres_min, thres_max)
-
+    if smooth:
+        edge = _fxaa.smooth_offset(edge, 20)
     if hdr:
         img = img/256
         img = img/(1-img)
@@ -24,14 +25,6 @@ def performance(img: torch.Tensor, thres_min, thres_max, r, hdr=False) -> (torch
         filtered = filtered/(1+filtered)*256
         print(filtered.min(), filtered.max())
     return filtered, edge
-
-
-def quality(img: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
-    pass
-
-
-def console(img: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
-    pass
 
 
 if __name__ == "__main__":

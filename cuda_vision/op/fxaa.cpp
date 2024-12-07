@@ -8,12 +8,16 @@ void mark_edge_op(
     const torch::Tensor& grad_y,
     float thres_min, float thres_max
 );
-
 void resample_op(
     torch::Tensor& result,
     const torch::Tensor& image,
     const torch::Tensor& edge,
     float r
+);
+void smooth_offset_op(
+    torch::Tensor& result,
+    const torch::Tensor& edge,
+    int max_iter
 );
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
@@ -54,7 +58,20 @@ torch::Tensor resample(
     return result;
 }
 
+torch::Tensor smooth_offset(
+    const torch::Tensor& edge,
+    int max_iter
+) {
+    CHECK_INPUT(edge);
+
+    torch::Tensor result = torch::empty_like(edge);
+    smooth_offset_op(result, edge, max_iter);
+
+    return result;
+}
+
 PYBIND11_MODULE(TORCH_EXTENSION_NAME, m) {
     m.def("mark_edge", &mark_edge, "Mark the edge to filter");
     m.def("resample", &resample, "Resample the original to finish");
+    m.def("smooth_offset", &smooth_offset, "Smooth uv offset");
 }
