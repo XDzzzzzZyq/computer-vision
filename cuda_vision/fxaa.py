@@ -12,9 +12,18 @@ def mark_edge(img: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
     return _fxaa.mark_edge(gray, grad_x, grad_y, thres_min, thres_max)
 
 
-def performance(img: torch.Tensor, thres_min, thres_max, r) -> torch.Tensor:
+def performance(img: torch.Tensor, thres_min, thres_max, r, hdr=False) -> (torch.Tensor, torch.Tensor):
     edge = mark_edge(img, thres_min, thres_max)
-    return _fxaa.resample(img, edge, r)
+
+    if hdr:
+        img = img/256
+        img = img/(1-img)
+        print(img.min(), img.max())
+    filtered = _fxaa.resample(img, edge, r)
+    if hdr:
+        filtered = filtered/(1+filtered)*256
+        print(filtered.min(), filtered.max())
+    return filtered, edge
 
 
 def quality(img: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
@@ -37,12 +46,15 @@ if __name__ == "__main__":
 
     raw = load_png('../fxaa/imgs/alias.png')
     compare_imgs(slice_target(raw))
-    print(raw.shape)
-    edge = performance(raw, 20.0, 0.125, r=0.5)
-    print(edge)
-    compare_imgs(slice_target(edge))
+    fxaa, edge = performance(raw, 20.0, 0.125, r=0.5)
+    compare_imgs(slice_target(fxaa))
+    compare_imgs(slice_target(edge[:, 0:1]*1000), range=None)
+    compare_imgs(slice_target(edge[:, 1:2]*1000), range=None)
+    fxaa_hdr, _ = performance(raw, 20.0, 0.125, r=0.5, hdr=True)
+    compare_imgs(slice_target(fxaa_hdr))
 
     gt = load_png('../fxaa/imgs/filtered.png')
     compare_imgs(slice_target(gt))
-    compare_imgs([raw, edge, gt], size=(16, 9))
+    compare_imgs([raw, fxaa_hdr, gt], size=(16, 9))
     plt.show()
+    save_png('../fxaa/imgs/fxaa_fast.png', fxaa)
