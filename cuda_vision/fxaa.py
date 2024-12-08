@@ -7,16 +7,17 @@ _fxaa = load_src("fxaa")
 
 
 def mark_edge(gray: torch.Tensor, thres_min, thres_max) -> torch.Tensor:
-    grad_x, grad_y = gradient_conv(gray, 'sobel')
+    grad_x, grad_y = gradient_conv(gray, 'pixel_diff')
     return _fxaa.mark_edge(gray, grad_x, grad_y, thres_min, thres_max)
 
 
-def performance(img: torch.Tensor, thres_min, thres_max, r=1.0, hdr=False, smooth=False) -> (torch.Tensor, torch.Tensor):
+def performance(img: torch.Tensor, thres_min, thres_max, r=1.0, hdr=False, smooth=False, mode=0) -> (torch.Tensor, torch.Tensor):
     gray = img.clone() if img.shape[1] == 1 else to_grayscale(img)
     edge = mark_edge(gray, thres_min, thres_max)
 
     if smooth:
-        edge = _fxaa.smooth_offset(gray, edge, 50)
+        edge = _fxaa.smooth_offset(gray, edge, 50, mode)
+        r = 1.0
 
     if hdr:
         img = img/256
@@ -32,7 +33,7 @@ def performance(img: torch.Tensor, thres_min, thres_max, r=1.0, hdr=False, smoot
 if __name__ == "__main__":
     from utils.imageIO import *
 
-    if False:
+    if True:
         def slice_target(tar):
             i1 = tar[:, :, 650:750, 550:650]
             i2 = tar[:, :, 1100:1200, 550:650]
@@ -44,8 +45,8 @@ if __name__ == "__main__":
         raw = load_png('../fxaa/imgs/alias.png')
         compare_imgs(slice_target(raw))
         fxaa, gray, edge = performance(raw, 20.0, 0.125, r=0.5, hdr=True)
-        fxaa_s, gray, smooth = performance(raw, 20.0, 0.125, r=0.5, hdr=True, smooth=True)
         compare_imgs(slice_target(fxaa))
+        fxaa_s, gray, smooth = performance(raw, 20.0, 0.125, hdr=True, smooth=True, mode=1)
         compare_imgs(slice_target(fxaa_s))
         compare_imgs_grid(slice_target(edge[:, 0:1]*1000)+slice_target(edge[:, 1:2]*1000)+slice_target(smooth[:, 0:1]*1000)+slice_target(smooth[:, 1:2]*1000), range=None, shape=(4, 5))
 

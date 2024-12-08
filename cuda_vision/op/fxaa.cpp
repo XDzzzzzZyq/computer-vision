@@ -18,7 +18,7 @@ void smooth_offset_op(
     torch::Tensor& result,
     const torch::Tensor& gray,
     const torch::Tensor& edge,
-    int max_iter
+    int max_iter, int mode
 );
 
 #define CHECK_CUDA(x) TORCH_CHECK(x.device().is_cuda(), #x " must be a CUDA tensor")
@@ -62,13 +62,13 @@ torch::Tensor resample(
 torch::Tensor smooth_offset(
     const torch::Tensor& gray,
     const torch::Tensor& edge,
-    int max_iter
+    int max_iter, int mode
 ) {
     CHECK_INPUT(gray);
     CHECK_INPUT(edge);
 
     torch::Tensor result = torch::empty_like(edge);
-    smooth_offset_op(result, gray, edge, max_iter);
+    smooth_offset_op(result, gray, edge, max_iter, mode);
 
     return result;
 }

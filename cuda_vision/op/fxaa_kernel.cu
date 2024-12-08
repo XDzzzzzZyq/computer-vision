@@ -298,7 +298,6 @@ static __global__ void smooth_offset_kernel2(
 
     float f = float(left.s)/float(left.s+right.s);
     off_c = (1-f) * left_off + f * right_off;
-    printf("%d, %d || %d, %d || %f\n", left.s, right.s, left.code, right.code, off_c);
 
     if(is_horizontal)
         set_value_channel(result, off_c, x, y, 1, 2);
@@ -364,7 +363,7 @@ void smooth_offset_op(
     torch::Tensor& result,
     const torch::Tensor& gray,
     const torch::Tensor& edge,
-    int max_iter
+    int max_iter, int mode
 ) {
     int curDevice = -1;
     cudaGetDevice(&curDevice);
@@ -375,12 +374,23 @@ void smooth_offset_op(
     int w = edge.size(3);
     dim3 grid_size(w, h, b);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel2", [&] {
-        smooth_offset_kernel2<scalar_t><<<grid_size, 1, 0, stream>>>(
-            result.data_ptr<scalar_t>(),
-            gray.data_ptr<scalar_t>(),
-            edge.data_ptr<scalar_t>(),
-            max_iter
-        );
-    });
+    if (mode == 0){
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel", [&] {
+            smooth_offset_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+                result.data_ptr<scalar_t>(),
+                gray.data_ptr<scalar_t>(),
+                edge.data_ptr<scalar_t>(),
+                max_iter
+            );
+        });
+    }else if(mode == 1){
+        AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel2", [&] {
+            smooth_offset_kernel2<scalar_t><<<grid_size, 1, 0, stream>>>(
+                result.data_ptr<scalar_t>(),
+                gray.data_ptr<scalar_t>(),
+                edge.data_ptr<scalar_t>(),
+                max_iter
+            );
+        });
+    }
 }
