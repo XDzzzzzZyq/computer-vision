@@ -101,12 +101,12 @@ template <typename scalar_t>
 struct march_info{
     int s = 0;
     int code = DEFAULT;
-    scalar_t off = 0.0;
 };
 
 template <typename scalar_t>
 static __global__ void smooth_offset_kernel(
     scalar_t* result,
+    const scalar_t* gray,
     const scalar_t* edge,
     int max_iter
 ) {
@@ -125,9 +125,9 @@ static __global__ void smooth_offset_kernel(
         
     bool is_horizontal = off_x == 0;
     scalar_t off_c = is_horizontal?off_y:off_x;
+
     march_info<scalar_t> left;
     march_info<scalar_t> right;
-
     for(left.s = 1; left.s<max_iter; left.s++){
         int x_c = is_horizontal ? x - left.s : x;
         int y_c =!is_horizontal ? y - left.s : y;
@@ -135,12 +135,12 @@ static __global__ void smooth_offset_kernel(
             left.code = BOUND;
             break;
         }
-        left.off = get_value_channel(edge, x_c, y_c, is_horizontal ? 1 : 0, 2);
-        if(left.off == 0.0){
+        scalar_t off_n = get_value_channel(edge, x_c, y_c, is_horizontal ? 1 : 0, 2);
+        if(off_n == 0.0){
             left.code = END;
             break;
         }
-        if(left.off * off_c < 0.0){
+        if(off_n * off_c < 0.0){
             left.code = FLIP;
             break;
         }
@@ -153,13 +153,116 @@ static __global__ void smooth_offset_kernel(
             right.code = BOUND;
             break;
         }
-        right.off = get_value_channel(edge, x_c, y_c, is_horizontal ? 1 : 0, 2);
-        if(right.off == 0.0){
+        scalar_t off_n = get_value_channel(edge, x_c, y_c, is_horizontal ? 1 : 0, 2);
+        if(off_n == 0.0){
             right.code = END;
             break;
         }
-        if(right.off * off_c < 0.0){
+        if(off_n * off_c < 0.0){
             right.code = FLIP;
+            break;
+        }
+    }
+
+    scalar_t left_off = 0.0;
+    scalar_t right_off = 0.0;
+
+    switch(left.code){
+    case BOUND:
+    case DEFAULT:
+        left_off = off_c;
+        break;
+    case END:
+        left_off = off_c > 0 ? 0.1 : -0.1;
+        break;
+    case FLIP:
+        left_off = off_c > 0 ? 0.5 : -0.5;
+        break;
+    }
+
+    switch(right.code){
+    case BOUND:
+    case DEFAULT:
+        right_off = off_c;
+        break;
+    case END:
+        right_off = off_c > 0 ? 0.1 : -0.1;
+        break;
+    case FLIP:
+        right_off = off_c > 0 ? 0.5 : -0.5;
+        break;
+    }
+
+    float f = float(left.s)/float(left.s+right.s);
+    off_c = (1-f) * left_off + f * right_off;
+
+    if(is_horizontal)
+        set_value_channel(result, off_c, x, y, 1, 2);
+    else
+        set_value_channel(result, off_c, x, y, 0, 2);
+}
+
+template <typename scalar_t>
+static __global__ void smooth_offset_kernel2(
+    scalar_t* result,
+    const scalar_t* gray,
+    const scalar_t* edge,
+    int max_iter
+) {
+    int x = blockIdx.x;
+    int y = blockIdx.y;
+    int w = gridDim.x;
+    int h = gridDim.y;
+
+    scalar_t off_x = get_value_channel(edge, x, y, 0, 2);
+    scalar_t off_y = get_value_channel(edge, x, y, 1, 2);
+    set_value_channel(result, off_x, x, y, 0, 2);
+    set_value_channel(result, off_y, x, y, 1, 2);
+
+    if(off_x == 0.0 && off_y == 0.0)
+        return;
+
+    bool is_horizontal = off_x == 0;
+    scalar_t off_c = is_horizontal?off_y:off_x;
+    scalar_t gray_c = get_value(gray, x, y);
+    int line_off = off_c > 0 ? -1 : 1;
+
+    march_info<scalar_t> left;
+    march_info<scalar_t> right;
+    for(left.s = 1; left.s<max_iter; left.s++){
+        int x_c = is_horizontal ? x - left.s : x;
+        int y_c =!is_horizontal ? y - left.s : y;
+        if(IS_OUT(x_c, y_c, w, h)){
+            left.code = BOUND;
+            break;
+        }
+        scalar_t gray_n1 = get_value(gray, x_c, y_c);
+        if(abs(gray_n1 - gray_c)>10){
+            left.code = FLIP;
+            break;
+        }
+        scalar_t gray_n2 = is_horizontal ? get_value(gray, x_c, y_c+line_off) : get_value(gray, x_c+line_off, y_c);
+        if(abs(gray_n2 - gray_c)<10){
+            left.code = END;
+            break;
+        }
+    }
+
+    for(right.s = 1; right.s<max_iter; right.s++){
+        int x_c = is_horizontal ? x + right.s : x;
+        int y_c =!is_horizontal ? y + right.s : y;
+        if(IS_OUT(x_c, y_c, w, h)){
+            right.code = BOUND;
+            break;
+        }
+        scalar_t gray_n1 = get_value(gray, x_c, y_c);
+        if(abs(gray_n1 - gray_c)>10){
+            right.code = FLIP;
+            break;
+        }
+        scalar_t gray_n2 = is_horizontal ? get_value(gray, x_c, y_c+line_off) : get_value(gray, x_c+line_off, y_c);
+        if(abs(gray_n2 - gray_c)<10){
+            right.code = END;
             break;
         }
     }
@@ -193,9 +296,10 @@ static __global__ void smooth_offset_kernel(
         break;
     }
 
-    float f = float(left.s)/float(left.s+left.s);
+    float f = float(left.s)/float(left.s+right.s);
     off_c = (1-f) * left_off + f * right_off;
-    printf("%d, %d || %d, %d\n", left.code, right.code, left.s, right.s);
+    printf("%d, %d || %d, %d || %f\n", left.s, right.s, left.code, right.code, off_c);
+
     if(is_horizontal)
         set_value_channel(result, off_c, x, y, 1, 2);
     else
@@ -258,6 +362,7 @@ void resample_op(
 
 void smooth_offset_op(
     torch::Tensor& result,
+    const torch::Tensor& gray,
     const torch::Tensor& edge,
     int max_iter
 ) {
@@ -270,9 +375,10 @@ void smooth_offset_op(
     int w = edge.size(3);
     dim3 grid_size(w, h, b);
 
-    AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel", [&] {
-        smooth_offset_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
+    AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel2", [&] {
+        smooth_offset_kernel2<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
+            gray.data_ptr<scalar_t>(),
             edge.data_ptr<scalar_t>(),
             max_iter
         );

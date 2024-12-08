@@ -16,6 +16,7 @@ void resample_op(
 );
 void smooth_offset_op(
     torch::Tensor& result,
+    const torch::Tensor& gray,
     const torch::Tensor& edge,
     int max_iter
 );
@@ -59,13 +60,15 @@ torch::Tensor resample(
 }
 
 torch::Tensor smooth_offset(
+    const torch::Tensor& gray,
     const torch::Tensor& edge,
     int max_iter
 ) {
+    CHECK_INPUT(gray);
     CHECK_INPUT(edge);
 
     torch::Tensor result = torch::empty_like(edge);
-    smooth_offset_op(result, edge, max_iter);
+    smooth_offset_op(result, gray, edge, max_iter);
 
     return result;
 }
