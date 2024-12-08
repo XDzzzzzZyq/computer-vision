@@ -10,6 +10,7 @@
 
 #include "pixelUtils.cuh"
 #include "arrayUtils.cuh"
+#include "debugUtils.cuh"
 
 template <typename scalar_t>
 static __global__ void mark_edge_kernel(
@@ -241,7 +242,9 @@ static __global__ void smooth_offset_kernel2(
             left.code = FLIP;
             break;
         }
-        scalar_t gray_n2 = is_horizontal ? get_value(gray, x_c, y_c+line_off) : get_value(gray, x_c+line_off, y_c);
+        int x_c2 = is_horizontal ? x_c : x_c+line_off;
+        int y_c2 =!is_horizontal ? y_c : y_c+line_off;
+        scalar_t gray_n2 = IS_OUT(x_c2, y_c2, w, h) ? 0.0 : get_value(gray, x_c2, y_c2);
         if(abs(gray_n2 - gray_c)<10){
             left.code = END;
             break;
@@ -260,7 +263,9 @@ static __global__ void smooth_offset_kernel2(
             right.code = FLIP;
             break;
         }
-        scalar_t gray_n2 = is_horizontal ? get_value(gray, x_c, y_c+line_off) : get_value(gray, x_c+line_off, y_c);
+        int x_c2 = is_horizontal ? x_c : x_c+line_off;
+        int y_c2 =!is_horizontal ? y_c : y_c+line_off;
+        scalar_t gray_n2 = IS_OUT(x_c2, y_c2, w, h) ? 0.0 : get_value(gray, x_c2, y_c2);
         if(abs(gray_n2 - gray_c)<10){
             right.code = END;
             break;
@@ -323,6 +328,8 @@ void mark_edge_op(
     int w = gray.size(3);
     dim3 grid_size(w, h, b);
 
+    check_error();
+
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(gray.scalar_type(), "mark_edge_kernel", [&] {
         mark_edge_kernel<scalar_t><<<grid_size, 9, 9*sizeof(scalar_t), stream>>>(
             result.data_ptr<scalar_t>(),
@@ -332,6 +339,8 @@ void mark_edge_op(
             thres_min, thres_max
         );
     });
+
+    check_error();
 }
 
 void resample_op(
@@ -349,6 +358,8 @@ void resample_op(
     int w = image.size(3);
     dim3 grid_size(w, h, b);
 
+    check_error();
+
     AT_DISPATCH_FLOATING_TYPES_AND_HALF(image.scalar_type(), "resample_kernel", [&] {
         resample_kernel<scalar_t><<<grid_size, 1, 0, stream>>>(
             result.data_ptr<scalar_t>(),
@@ -357,6 +368,8 @@ void resample_op(
             r
         );
     });
+
+    check_error();
 }
 
 void smooth_offset_op(
@@ -373,6 +386,8 @@ void smooth_offset_op(
     int h = edge.size(2);
     int w = edge.size(3);
     dim3 grid_size(w, h, b);
+
+    check_error();
 
     if (mode == 0){
         AT_DISPATCH_FLOATING_TYPES_AND_HALF(edge.scalar_type(), "smooth_offset_kernel", [&] {
@@ -393,4 +408,6 @@ void smooth_offset_op(
             );
         });
     }
+
+    check_error();
 }
